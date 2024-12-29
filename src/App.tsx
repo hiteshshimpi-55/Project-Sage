@@ -29,7 +29,7 @@ import {createNativeStackNavigator} from "@react-navigation/native-stack"
 
 // Screens  
 import Home from "./screens/home/Home"
-import Auth from "./screens/auth/Auth"
+import AuthScreen from './screens/auth/AuthScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -43,7 +43,7 @@ function App(): React.JSX.Element {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
         <Stack.Screen name="Home" component={Home} />
-        <Stack.Screen name="Auth" component={Auth} />
+        <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
