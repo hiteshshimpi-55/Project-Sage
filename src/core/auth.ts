@@ -1,60 +1,42 @@
 import supabase from './supabase';
-import bcrypt from 'react-native-bcrypt';
 
-// Function to sign up a new user with phone and password
-export const signUpWithPhone = async (phone: string, password: string, fullName: string) => {
+interface SignupParams {
+  phone: string;
+  password: string;
+  fullName: string;
+}
+
+export const signupWithPhone = async ({ phone, password, fullName }: SignupParams) => {
+  console.log('Attempting signup with:', { phone, password, fullName }); // Log inputs
   try {
-    // Check if phone already exists
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('*')
-      .eq('phone', phone)
-      .single();
+    const { data, error } = await supabase.auth.signUp({
+      phone,
+      password,
+      options: {
+        data: { full_name: fullName },
+      },
+    });
 
-    if (existingUser) {
-      throw new Error('Phone number already registered.');
-    }
+    console.log('Supabase signup response:', { data, error }); // Log response
 
-    // Hash the password
-    const salt = bcrypt.genSaltSync(10);
-    const hashedPassword = bcrypt.hashSync(password, salt);
-
-    // Insert user into the `users` table
-    const { data, error } = await supabase.from('users').insert([
-      { phone, password: hashedPassword, full_name: fullName },
-    ]);
-
-    if (error) throw error;
-
-    return { success: true, data };
-  } catch (error) {
-    return { success: false, error: (error as any).message };
+    if (error) throw new Error(error.message); // Proper error handling
+    return data; // Return user data if successful
+  } catch (err: any) {
+    console.error('Signup error:', err.message || err); // Log error
+    throw new Error(err.message || 'Signup failed');
   }
 };
 
-// Function to log in the user with phone and password
 export const loginWithPhone = async (phone: string, password: string) => {
   try {
-    // Fetch the user by phone
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('phone', phone)
-      .single();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      phone,
+      password,
+    });
 
-    if (error || !user) {
-      throw new Error('Invalid phone number or password.');
-    }
-
-    // Compare the password
-    const isPasswordValid = bcrypt.compareSync(password, user.password);
-
-    if (!isPasswordValid) {
-      throw new Error('Invalid phone number or password.');
-    }
-
-    return { success: true, data: user };
-  } catch (error) {
-    return { success: false, error: (error as any).message };
+    if (error) throw error;
+    return data;
+  } catch (err: any) {
+    throw new Error(err.message || 'Login failed');
   }
 };
