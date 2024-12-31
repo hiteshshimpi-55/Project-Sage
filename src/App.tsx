@@ -29,11 +29,14 @@ import {createNativeStackNavigator} from "@react-navigation/native-stack"
 
 // Screens  
 import Home from "./screens/home/Home"
-import Auth from "./screens/auth/Auth"
+import Signup from './screens/auth/Signup';
+import Login from './screens/auth/Login';
 
 export type RootStackParamList = {
   Home: undefined;
   Auth: undefined;
+  Login: undefined;
+  Signup: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -41,9 +44,11 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function App(): React.JSX.Element {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home">
+      <Stack.Navigator initialRouteName="Login">
+      <Stack.Screen name="Login" component={Login} />
+        <Stack.Screen name="Signup" component={Signup} />
         <Stack.Screen name="Home" component={Home} />
-        <Stack.Screen name="Auth" component={Auth} />
+
       </Stack.Navigator>
     </NavigationContainer>
   );
