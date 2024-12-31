@@ -1,22 +1,44 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
-import { TextInput, Button, Text } from 'react-native-paper';
-import { loginWithPhone } from '../../core/auth';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  Alert,
+} from 'react-native';
+import supabase from '../../core/supabase';
 
-const Login: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const [phone, setPhone] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+const Login = () => {
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    // Validation
+    if (!phone || !password) {
+      Alert.alert('Error', 'Please enter both phone number and password.');
+      return;
+    }
+
     setLoading(true);
+
     try {
-      await loginWithPhone(phone, password);
-      Alert.alert('Success', 'Logged in successfully!', [
-        { text: 'OK', onPress: () => navigation.navigate('Home') },
-      ]);
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        phone: `+${phone}`, // Ensure the phone number includes a country code
+        password: password,
+      });
+
+      if (error) {
+        console.error('Login error:', error);
+        Alert.alert('Error', error.message || 'Login failed.');
+      } else if (data) {
+        Alert.alert('Success', 'Login successful!');
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      Alert.alert('Error', 'Something went wrong.');
     } finally {
       setLoading(false);
     }
@@ -24,35 +46,67 @@ const Login: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>Login</Text>
       <TextInput
-        label="Phone Number"
+        style={styles.input}
+        placeholder="Phone (include country code)"
+        keyboardType="phone-pad"
         value={phone}
         onChangeText={setPhone}
-        keyboardType="phone-pad"
-        style={styles.input}
       />
       <TextInput
-        label="Password"
+        style={styles.input}
+        placeholder="Password"
+        secureTextEntry
         value={password}
         onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
       />
-      <Button mode="contained" onPress={handleLogin} loading={loading} style={styles.button}>
-        Log In
-      </Button>
-      <Button onPress={() => navigation.navigate('Signup')} style={styles.link}>
-        Don't have an account? Sign Up
-      </Button>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text style={styles.buttonText}>Log In</Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center' },
-  input: { marginBottom: 15 },
-  button: { marginTop: 20 },
-  link: { marginTop: 10 },
-});
-
 export default Login;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+  },
+  button: {
+    backgroundColor: '#28A745',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
