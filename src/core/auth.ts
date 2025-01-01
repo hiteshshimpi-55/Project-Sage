@@ -1,42 +1,51 @@
 import supabase from './supabase';
 
-interface SignupParams {
-  phone: string;
-  password: string;
-  fullName: string;
+interface AuthResponse {
+  data: any;
+  error: Error | null;
 }
 
-export const signupWithPhone = async ({ phone, password, fullName }: SignupParams) => {
-  console.log('Attempting signup with:', { phone, password, fullName }); // Log inputs
+interface SignUpOptions {
+  fullName: string;
+  phone: string;
+  password: string;
+  gender?: string;
+  age?: number;
+  dob?: string; // Use string for date in YYYY-MM-DD format
+}
+
+export const signUp = async ({ phone, password, fullName, gender, age, dob }: SignUpOptions): Promise<AuthResponse> => {
   try {
     const { data, error } = await supabase.auth.signUp({
-      phone,
+      phone: `+${phone}`,
       password,
       options: {
-        data: { full_name: fullName },
+        data: {
+          full_name: fullName,
+          role: 'user', // Default role
+          status: 'inactive', // Default status
+          gender: gender || null,
+          age: age || null,
+          dob: dob || null,
+        },
       },
     });
-
-    console.log('Supabase signup response:', { data, error }); // Log response
-
-    if (error) throw new Error(error.message); // Proper error handling
-    return data; // Return user data if successful
-  } catch (err: any) {
-    console.error('Signup error:', err.message || err); // Log error
-    throw new Error(err.message || 'Signup failed');
+    return { data, error };
+  } catch (error) {
+    console.error('Unexpected error during sign up:', error);
+    return { data: null, error: error as Error };
   }
 };
 
-export const loginWithPhone = async (phone: string, password: string) => {
+export const login = async (phone: string, password: string): Promise<AuthResponse> => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
-      phone,
+      phone: `+${phone}`,
       password,
     });
-
-    if (error) throw error;
-    return data;
-  } catch (err: any) {
-    throw new Error(err.message || 'Login failed');
+    return { data, error };
+  } catch (error: any) {
+    console.error('Unexpected error during login:', error);
+    return { data: null, error: error as Error };
   }
 };

@@ -1,77 +1,49 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  Alert,
-} from 'react-native';
+import { View, Text, Alert, StyleSheet } from 'react-native';
+import { login } from '../../core/auth';
+import Input from '../../components/atoms/Input';
+import Button from '../../components/atoms/Button';
 import supabase from '../../core/supabase';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '../../App';
 
-const Login = () => {
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+
+const Login: React.FC = () => {
+  const [phone, setPhone] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+// Add useNavigation hook to get access to the navigation object
+const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const handleLogin = async () => {
-    // Validation
     if (!phone || !password) {
       Alert.alert('Error', 'Please enter both phone number and password.');
       return;
     }
 
     setLoading(true);
+    const { error } = await login(phone, password);
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        phone: `+${phone}`, // Ensure the phone number includes a country code
-        password: password,
-      });
-
-      if (error) {
-        console.error('Login error:', error);
-        Alert.alert('Error', error.message || 'Login failed.');
-      } else if (data) {
-        Alert.alert('Success', 'Login successful!');
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      Alert.alert('Error', 'Something went wrong.');
-    } finally {
-      setLoading(false);
+    if (error) {
+      Alert.alert('Error', error.message || 'Login failed.');
+    } else {
+      Alert.alert('Success', 'Login successful!');
+      navigation.navigate('Home');
     }
+    setLoading(false);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: sessionData } = await supabase.auth.getSession();
+    console.log(user);
+    console.log(sessionData);
   };
 
+  
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Phone (include country code)"
-        keyboardType="phone-pad"
-        value={phone}
-        onChangeText={setPhone}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.buttonText}>Log In</Text>
-        )}
-      </TouchableOpacity>
+      <Input placeholder="Phone (include country code)" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+      <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+      <Button title="Log In" onPress={handleLogin} loading={loading} />
     </View>
   );
 };
@@ -90,23 +62,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
-  },
-  button: {
-    backgroundColor: '#28A745',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
