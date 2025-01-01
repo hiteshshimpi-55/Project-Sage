@@ -1,19 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Alert, StyleSheet } from 'react-native';
 import { login } from '../../core/auth';
 import Input from '../../components/atoms/Input';
 import Button from '../../components/atoms/Button';
-import supabase from '../../core/supabase';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
-
+import { setUserContext, useUser } from '../../hooks/UserContext';
+import supabase from '../../core/supabase';
 
 const Login: React.FC = () => {
   const [phone, setPhone] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-// Add useNavigation hook to get access to the navigation object
-const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const handleLogin = async () => {
     if (!phone || !password) {
@@ -22,21 +21,31 @@ const navigation = useNavigation<NavigationProp<RootStackParamList>>();
     }
 
     setLoading(true);
-    const { error } = await login(phone, password);
+    const {data, error } = await login(phone, password);
 
     if (error) {
       Alert.alert('Error', error.message || 'Login failed.');
     } else {
       Alert.alert('Success', 'Login successful!');
+      setUserContext(data);
       navigation.navigate('Home');
     }
+
     setLoading(false);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: sessionData } = await supabase.auth.getSession();
-    console.log(user);
-    console.log(sessionData);
   };
 
+
+  const getCurrentUser = async () => {
+    const {data:{user},error} = await supabase.auth.getUser();
+    console.log('Current user:', user);
+    if (user) {
+      navigation.navigate('Home');
+    }
+  };
+
+  useEffect(() => {
+    getCurrentUser();
+  }, []);
   
   return (
     <View style={styles.container}>

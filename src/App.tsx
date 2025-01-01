@@ -18,17 +18,23 @@ import Home from './screens/home/Home';
 import ChatScreen from './screens/chats/Chat';
 import AdminDashboard from './screens/admin/AdminDashboard';
 import { UserProvider } from './hooks/UserContext';
+import ChatListing from './screens/chats/ChatListing';
 
 export type RootStackParamList = {
   Welcome: undefined;
   Signup: undefined;
   Login: undefined;
   Home: undefined;
-  ChatScreen: undefined;
   AdminDashboard: undefined;
+  ChatScreen: {
+    id: string;
+  };
+  ChatListing: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+
 
 function App(): React.JSX.Element {
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -55,7 +61,7 @@ function App(): React.JSX.Element {
       </View>
     );
   }
-
+  
   return (
     <UserProvider>
     <NavigationContainer>
@@ -70,6 +76,7 @@ function App(): React.JSX.Element {
           component={AdminDashboard}
           options={{ title: 'Admin Dashboard' }} // Optional: Customize title
         />
+        <Stack.Screen name="ChatListing" component={ChatListing} />
       </Stack.Navigator>
     </NavigationContainer>
     </UserProvider>

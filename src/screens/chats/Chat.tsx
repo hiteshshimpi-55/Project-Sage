@@ -12,22 +12,35 @@ import {
   Keyboard,
 } from 'react-native';
 import supabase from '../../core/supabase';
+import { ChatService, Message } from './service';
+import { RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from 'src/App';
 
-type Message = {
-  id: string;
-  text: string;
-  chat_id: string;
-  created_by: string;
-  created_at: string;
-  type: string;
-  media_url: string;
-};
 
-const ChatScreen: React.FC = () => {
+type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
+
+interface ChatScreenProps {
+  route: ChatScreenRouteProp;
+}
+
+const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
 
-  const currentUserId = '287eb38e-79a4-4f1b-afdb-fbaf46fa7703'; // Replace with actual user ID
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const chatUserId = await ChatService.getChatUserId('');
+      console.log('Current user ID:', chatUserId);
+      setCurrentUserId(chatUserId);
+    };
+    fetchUserId();
+  }, []);
+  
+  
+  // Replace with actual user ID
   const chatId = 'b873fbcf-c501-4a7a-97be-01c4469830f5'; // Replace with actual chat ID
 
   // Fetch initial messages
@@ -72,11 +85,13 @@ const ChatScreen: React.FC = () => {
   const handleSend = async () => {
     if (!inputText.trim()) return;
 
+
+
     try {
       const { error } = await supabase.from('message').insert({
         text: inputText.trim(),
         chat_id: chatId,
-        created_by: currentUserId,
+        created_by: currentUserId!,
         type: 'text',
         media_url: '',
       });
