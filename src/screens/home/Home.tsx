@@ -37,6 +37,11 @@ const Home: React.FC = () => {
         onPress={() => navigation.navigate('AdminDashboard')}
         style={styles.chatButton}
       />
+      <Button
+        title="Generate Meeting Link"
+        onPress={() => navigation.navigate('MeetLink')}
+        style={styles.chatButton}
+      />
     </View>
   );
 };

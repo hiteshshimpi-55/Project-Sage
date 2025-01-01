@@ -19,6 +19,7 @@ import ChatScreen from './screens/chats/Chat';
 import AdminDashboard from './screens/admin/AdminDashboard';
 import { UserProvider } from './hooks/UserContext';
 import ChatListing from './screens/chats/ChatListing';
+import AdminMeeting from './screens/admin/AdminMeet';
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -30,6 +31,7 @@ export type RootStackParamList = {
     id: string;
   };
   ChatListing: undefined;
+  MeetLink: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -77,6 +79,7 @@ function App(): React.JSX.Element {
           options={{ title: 'Admin Dashboard' }} // Optional: Customize title
         />
         <Stack.Screen name="ChatListing" component={ChatListing} />
+        <Stack.Screen name="MeetLink" component={AdminMeeting} />
       </Stack.Navigator>
     </NavigationContainer>
     </UserProvider>
