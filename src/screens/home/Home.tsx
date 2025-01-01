@@ -5,28 +5,14 @@ import React from 'react'
 import {NativeStackScreenProps} from "@react-navigation/native-stack"
 
 import { RootStackParamList } from '../../App'
+import ChatScreen from '../chats/Chat'
 
 type HomeProps = NativeStackScreenProps<RootStackParamList,'Home'>
 
 const Home = ({navigation}:HomeProps) => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.smallText}>Home</Text>
-      <Text onPress={()=>navigation.navigate('Auth')}>Go to Profile</Text>
-    </View>
+      <ChatScreen/>
   )
 }
 
 export default Home
-
-const styles = StyleSheet.create({
-    container:{
-        flex:1,
-        justifyContent:'center',
-        alignItems:'center'
-    },
-    smallText:{
-        color:'red',
-        fontSize:12
-    }
-})
