@@ -53,7 +53,7 @@ function App(): React.JSX.Element {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName={isAuthenticated ? 'Home' : 'Welcome'}>
+      <Stack.Navigator initialRouteName={isAuthenticated ? 'Login' : 'Home'}>
         <Stack.Screen name="Welcome" component={Welcome} />
         <Stack.Screen name="Signup" component={Signup} />
         <Stack.Screen name="Login" component={Login} />

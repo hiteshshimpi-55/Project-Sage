@@ -11,10 +11,10 @@
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
-		1724AB8C2550A2EC27933C2E /* libPods-project_sage.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 17204C07A74376194BF326BE /* libPods-project_sage.a */; };
-		2D32752C2839E41262CAA3FA /* libPods-project_sage-project_sageTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 51BEE1678048569E1774B97F /* libPods-project_sage-project_sageTests.a */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		9C3A62F4DECD461D4CC8685D /* libPods-project_sage.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 81AD82C50B74FFE71B0BC392 /* libPods-project_sage.a */; };
 		CBBB8B56664B881A6044060B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		EAC6FD033EFB393B652C4373 /* libPods-project_sage-project_sageTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 29AB042941742D113C90616B /* libPods-project_sage-project_sageTests.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,7 +31,6 @@
 		00E356EE1AD99517003FC87E /* project_sageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = project_sageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		00E356F11AD99517003FC87E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		00E356F21AD99517003FC87E /* project_sageTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = project_sageTests.m; sourceTree = "<group>"; };
-		0F552A6D910F06DB6AD5E0F3 /* Pods-project_sage.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-project_sage.release.xcconfig"; path = "Target Support Files/Pods-project_sage/Pods-project_sage.release.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* project_sage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = project_sage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = project_sage/AppDelegate.h; sourceTree = "<group>"; };
 		13B07FB01A68108700A75B9A /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AppDelegate.mm; path = project_sage/AppDelegate.mm; sourceTree = "<group>"; };
@@ -39,12 +38,13 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = project_sage/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = project_sage/main.m; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = project_sage/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		17204C07A74376194BF326BE /* libPods-project_sage.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-project_sage.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		37081D4086FA44DEACACD288 /* Pods-project_sage-project_sageTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-project_sage-project_sageTests.release.xcconfig"; path = "Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests.release.xcconfig"; sourceTree = "<group>"; };
-		51BEE1678048569E1774B97F /* libPods-project_sage-project_sageTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-project_sage-project_sageTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		24C9A9E7BE23D72FC0C9836E /* Pods-project_sage.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-project_sage.debug.xcconfig"; path = "Target Support Files/Pods-project_sage/Pods-project_sage.debug.xcconfig"; sourceTree = "<group>"; };
+		29AB042941742D113C90616B /* libPods-project_sage-project_sageTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-project_sage-project_sageTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		353BFD042AAFC98A89024391 /* Pods-project_sage-project_sageTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-project_sage-project_sageTests.debug.xcconfig"; path = "Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests.debug.xcconfig"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = project_sage/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		9E9EE0E443E348A857B4F070 /* Pods-project_sage.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-project_sage.debug.xcconfig"; path = "Target Support Files/Pods-project_sage/Pods-project_sage.debug.xcconfig"; sourceTree = "<group>"; };
-		CDF7491253B5C2879C60631F /* Pods-project_sage-project_sageTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-project_sage-project_sageTests.debug.xcconfig"; path = "Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests.debug.xcconfig"; sourceTree = "<group>"; };
+		81AD82C50B74FFE71B0BC392 /* libPods-project_sage.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-project_sage.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B4F7C9EB6DEC787194DEA1B2 /* Pods-project_sage-project_sageTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-project_sage-project_sageTests.release.xcconfig"; path = "Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests.release.xcconfig"; sourceTree = "<group>"; };
+		E326C62F61DD5DAAE9FD9BBF /* Pods-project_sage.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-project_sage.release.xcconfig"; path = "Target Support Files/Pods-project_sage/Pods-project_sage.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -53,7 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2D32752C2839E41262CAA3FA /* libPods-project_sage-project_sageTests.a in Frameworks */,
+				EAC6FD033EFB393B652C4373 /* libPods-project_sage-project_sageTests.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -61,7 +61,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1724AB8C2550A2EC27933C2E /* libPods-project_sage.a in Frameworks */,
+				9C3A62F4DECD461D4CC8685D /* libPods-project_sage.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -103,8 +103,8 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				17204C07A74376194BF326BE /* libPods-project_sage.a */,
-				51BEE1678048569E1774B97F /* libPods-project_sage-project_sageTests.a */,
+				81AD82C50B74FFE71B0BC392 /* libPods-project_sage.a */,
+				29AB042941742D113C90616B /* libPods-project_sage-project_sageTests.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -143,10 +143,10 @@
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				9E9EE0E443E348A857B4F070 /* Pods-project_sage.debug.xcconfig */,
-				0F552A6D910F06DB6AD5E0F3 /* Pods-project_sage.release.xcconfig */,
-				CDF7491253B5C2879C60631F /* Pods-project_sage-project_sageTests.debug.xcconfig */,
-				37081D4086FA44DEACACD288 /* Pods-project_sage-project_sageTests.release.xcconfig */,
+				24C9A9E7BE23D72FC0C9836E /* Pods-project_sage.debug.xcconfig */,
+				E326C62F61DD5DAAE9FD9BBF /* Pods-project_sage.release.xcconfig */,
+				353BFD042AAFC98A89024391 /* Pods-project_sage-project_sageTests.debug.xcconfig */,
+				B4F7C9EB6DEC787194DEA1B2 /* Pods-project_sage-project_sageTests.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -158,12 +158,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 00E357021AD99517003FC87E /* Build configuration list for PBXNativeTarget "project_sageTests" */;
 			buildPhases = (
-				0C67AEFC5C6F1688566FACEB /* [CP] Check Pods Manifest.lock */,
+				843FE6408D22275154ACFFB9 /* [CP] Check Pods Manifest.lock */,
 				00E356EA1AD99517003FC87E /* Sources */,
 				00E356EB1AD99517003FC87E /* Frameworks */,
 				00E356EC1AD99517003FC87E /* Resources */,
-				D687D602C36719AF6ECE6BD1 /* [CP] Embed Pods Frameworks */,
-				2DE9A7346BBEB47938A97A27 /* [CP] Copy Pods Resources */,
+				D646FFE325CF68866117108A /* [CP] Embed Pods Frameworks */,
+				B0BF62A59463D5E01C5607B0 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -179,13 +179,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "project_sage" */;
 			buildPhases = (
-				8AEFEFD89600791916C39CB0 /* [CP] Check Pods Manifest.lock */,
+				6F94D2F0C494BF8609C979A2 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				DC5FA4723C1F0777A6505744 /* [CP] Embed Pods Frameworks */,
-				1913510784B61E863CC2C46F /* [CP] Copy Pods Resources */,
+				35412FBDF1F5A9970E8492D2 /* [CP] Embed Pods Frameworks */,
+				97C5391B99D45E0068909C8E /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -269,63 +269,24 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		0C67AEFC5C6F1688566FACEB /* [CP] Check Pods Manifest.lock */ = {
+		35412FBDF1F5A9970E8492D2 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
+			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-project_sage-project_sageTests-checkManifestLockResult.txt",
+				"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-frameworks-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		1913510784B61E863CC2C46F /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		2DE9A7346BBEB47938A97A27 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests-resources-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Copy Pods Resources";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		8AEFEFD89600791916C39CB0 /* [CP] Check Pods Manifest.lock */ = {
+		6F94D2F0C494BF8609C979A2 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -347,7 +308,63 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		D687D602C36719AF6ECE6BD1 /* [CP] Embed Pods Frameworks */ = {
+		843FE6408D22275154ACFFB9 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-project_sage-project_sageTests-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		97C5391B99D45E0068909C8E /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		B0BF62A59463D5E01C5607B0 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D646FFE325CF68866117108A /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -362,23 +379,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-project_sage-project_sageTests/Pods-project_sage-project_sageTests-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		DC5FA4723C1F0777A6505744 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-frameworks-${CONFIGURATION}-input-files.xcfilelist",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-project_sage/Pods-project_sage-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -414,7 +414,7 @@
 /* Begin XCBuildConfiguration section */
 		00E356F61AD99517003FC87E /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = CDF7491253B5C2879C60631F /* Pods-project_sage-project_sageTests.debug.xcconfig */;
+			baseConfigurationReference = 353BFD042AAFC98A89024391 /* Pods-project_sage-project_sageTests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -441,7 +441,7 @@
 		};
 		00E356F71AD99517003FC87E /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 37081D4086FA44DEACACD288 /* Pods-project_sage-project_sageTests.release.xcconfig */;
+			baseConfigurationReference = B4F7C9EB6DEC787194DEA1B2 /* Pods-project_sage-project_sageTests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COPY_PHASE_STRIP = NO;
@@ -465,7 +465,7 @@
 		};
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9E9EE0E443E348A857B4F070 /* Pods-project_sage.debug.xcconfig */;
+			baseConfigurationReference = 24C9A9E7BE23D72FC0C9836E /* Pods-project_sage.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -493,7 +493,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 0F552A6D910F06DB6AD5E0F3 /* Pods-project_sage.release.xcconfig */;
+			baseConfigurationReference = E326C62F61DD5DAAE9FD9BBF /* Pods-project_sage.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
