@@ -32,6 +32,11 @@ const Home: React.FC = () => {
         onPress={() => navigation.navigate('ChatScreen')}
         style={styles.chatButton}
       />
+      <Button
+        title="Admin Dashboard"
+        onPress={() => navigation.navigate('AdminDashboard')}
+        style={styles.chatButton}
+      />
     </View>
   );
 };

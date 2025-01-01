@@ -15,3 +15,15 @@ const supabase = createClient(url, key, {
 });
 
 export default supabase;
+
+const admin_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqY2lzbGZmbXlwYWV1bmp1cGJzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNDg4ODc5NywiZXhwIjoyMDUwNDY0Nzk3fQ.j9DVBZ3Bx4WFuVnplD25oOQw9E8E6igheIIDRW6t4xw";
+const admin_supabase = createClient(url, admin_key, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+})
+
+// Access auth admin api
+const adminAuthClient = admin_supabase.auth.admin
+export {adminAuthClient}

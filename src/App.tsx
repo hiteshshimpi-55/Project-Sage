@@ -16,6 +16,8 @@ import Login from './screens/auth/Login';
 import Welcome from './screens/auth/Welcome';
 import Home from './screens/home/Home';
 import ChatScreen from './screens/chats/Chat';
+import AdminDashboard from './screens/admin/AdminDashboard';
+import { UserProvider } from './hooks/UserContext';
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -23,6 +25,7 @@ export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
   ChatScreen: undefined;
+  AdminDashboard: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -54,15 +57,22 @@ function App(): React.JSX.Element {
   }
 
   return (
+    <UserProvider>
     <NavigationContainer>
-      <Stack.Navigator initialRouteName={isAuthenticated ? 'Login' : 'Home'}>
+      <Stack.Navigator initialRouteName={isAuthenticated ? 'Home' : 'Welcome'}>
         <Stack.Screen name="Welcome" component={Welcome} />
         <Stack.Screen name="ChatScreen" component={ChatScreen} />
         <Stack.Screen name="Signup" component={Signup} />
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen
+          name="AdminDashboard"
+          component={AdminDashboard}
+          options={{ title: 'Admin Dashboard' }} // Optional: Customize title
+        />
       </Stack.Navigator>
     </NavigationContainer>
+    </UserProvider>
   );
 }
 
