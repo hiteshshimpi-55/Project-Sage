@@ -4,7 +4,6 @@ import supabase from '../../core/supabase';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App'; // Import your navigation types
 import Button from '../../components/atoms/Button'; // Import your custom Button component
-import ChatScreen from '../chats/Chat';
 
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -20,7 +19,20 @@ const Home: React.FC = () => {
   };
 
   return (
-    <ChatScreen/>
+    <View style={styles.container}>
+      <Text style={styles.title}>Hello!</Text>
+      <Text style={styles.subtitle}>This is my app.</Text>
+      <Button
+        title="Log Out"
+        onPress={handleLogout}
+        style={styles.logoutButton}
+      />
+      <Button
+        title="Chat"
+        onPress={() => navigation.navigate('ChatScreen')}
+        style={styles.chatButton}
+      />
+    </View>
   );
 };
 
@@ -45,5 +57,9 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: '#FF0000', // Customize the button color for logout
+  },
+  chatButton: {
+    marginTop: 10,
+    backgroundColor: '#007BFF', // Customize the button color for logout
   },
 });

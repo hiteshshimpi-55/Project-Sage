@@ -15,12 +15,14 @@ import Signup from './screens/auth/Signup';
 import Login from './screens/auth/Login';
 import Welcome from './screens/auth/Welcome';
 import Home from './screens/home/Home';
+import ChatScreen from './screens/chats/Chat';
 
 export type RootStackParamList = {
   Welcome: undefined;
   Signup: undefined;
   Login: undefined;
   Home: undefined;
+  ChatScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -55,6 +57,7 @@ function App(): React.JSX.Element {
     <NavigationContainer>
       <Stack.Navigator initialRouteName={isAuthenticated ? 'Login' : 'Home'}>
         <Stack.Screen name="Welcome" component={Welcome} />
+        <Stack.Screen name="ChatScreen" component={ChatScreen} />
         <Stack.Screen name="Signup" component={Signup} />
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="Home" component={Home} />
