@@ -7,12 +7,13 @@ import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import { setUserContext, useUser } from '../../hooks/UserContext';
 import supabase from '../../core/supabase';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const Login: React.FC = () => {
   const [phone, setPhone] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleLogin = async () => {
     if (!phone || !password) {
@@ -27,8 +28,7 @@ const Login: React.FC = () => {
       Alert.alert('Error', error.message || 'Login failed.');
     } else {
       Alert.alert('Success', 'Login successful!');
-      setUserContext(data);
-      navigation.navigate('Home');
+      navigation.replace('Home');
     }
 
     setLoading(false);
