@@ -29,7 +29,7 @@ const Home: React.FC = () => {
       />
       <Button
         title="Chat"
-        onPress={() => navigation.navigate('ChatScreen')}
+        onPress={() => navigation.navigate('ChatListing')}
         style={styles.chatButton}
       />
     </View>

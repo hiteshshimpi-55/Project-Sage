@@ -35,3 +35,13 @@ export const useUser = (): UserContextProps => {
   }
   return context;
 };
+
+export const setUserContext = (user: User | null): void => {
+  const context = useContext(UserContext);
+  if (context) {
+    context.setUser(user);
+  }
+  else {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+};
