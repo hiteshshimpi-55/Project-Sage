@@ -1,91 +1,56 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  Alert,
-} from 'react-native';
-import supabase from '../../core/supabase';
+import { View, Text, Alert, StyleSheet } from 'react-native';
+import { signUp } from '../../core/auth';
+import Input from '../../components/atoms/Input';
+import Button from '../../components/atoms/Button';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '../../App';
 
-const Signup = () => {
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+const Signup: React.FC = () => {
+  const [fullName, setFullName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [gender, setGender] = useState<string>('');
+  const [age, setAge] = useState<string>(''); // Use string for input
+  const [dob, setDob] = useState<string>(''); // YYYY-MM-DD
+  const [loading, setLoading] = useState<boolean>(false);
 
+const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const handleSignup = async () => {
-    // Validation
     if (!fullName || !phone || !password) {
-      Alert.alert('Error', 'Please fill all the fields.');
+      Alert.alert('Error', 'Please fill all the required fields.');
       return;
     }
 
     setLoading(true);
+    const { error } = await signUp({
+      phone,
+      password,
+      fullName,
+      gender: gender || undefined,
+      age: age ? parseInt(age, 10) : undefined,
+      dob: dob || undefined,
+    });
 
-    try {
-
-      console.log('Attempting signup with:', { phone, password, fullName });
-      const { data, error } = await supabase.auth.signUp({
-        phone: `+${phone}`, // Ensure the phone number includes a country code
-        password: password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-
-      if (error) {
-        console.error('Error signing up:', error);
-        Alert.alert('Error', error.message || 'Failed to sign up.');
-      } else if (data) {
-        Alert.alert('Success', 'Signup successful!');
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      Alert.alert('Error', 'Something went wrong.');
-    } finally {
-      setLoading(false);
+    if (error) {
+      Alert.alert('Error', error.message || 'Failed to sign up.');
+    } else {
+      Alert.alert('Success', 'Signup successful!');
+      navigation.navigate('Home');
     }
+    setLoading(false);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Signup</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Full Name"
-        value={fullName}
-        onChangeText={setFullName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Phone (include country code)"
-        keyboardType="phone-pad"
-        value={phone}
-        onChangeText={setPhone}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleSignup}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign Up</Text>
-        )}
-      </TouchableOpacity>
+      <Input placeholder="Full Name" value={fullName} onChangeText={setFullName} />
+      <Input placeholder="Phone (include country code)" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+      <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+      <Input placeholder="Gender (optional)" value={gender} onChangeText={setGender} />
+      <Input placeholder="Age (optional)" keyboardType="numeric" value={age} onChangeText={setAge} />
+      <Input placeholder="Date of Birth (optional, YYYY-MM-DD)" value={dob} onChangeText={setDob} />
+      <Button title="Sign Up" onPress={handleSignup} loading={loading} />
     </View>
   );
 };
@@ -104,23 +69,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
-  },
-  button: {
-    backgroundColor: '#007BFF',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });

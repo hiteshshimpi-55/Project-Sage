@@ -1,75 +1,74 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  useColorScheme,
+  ActivityIndicator,
   View,
+  Text,
 } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import supabase from './core/supabase';
 
-import {
-  Colors,
-  Header,
-  LearnMoreLinks,
-} from 'react-native/Libraries/NewAppScreen';
-
-
-// Navigation
-import {NavigationContainer} from "@react-navigation/native"
-import {createNativeStackNavigator} from "@react-navigation/native-stack"
-
-// Screens  
-import Home from "./screens/home/Home"
+// Screens
 import Signup from './screens/auth/Signup';
 import Login from './screens/auth/Login';
+import Welcome from './screens/auth/Welcome';
+import Home from './screens/home/Home';
 
 export type RootStackParamList = {
-  Home: undefined;
-  Auth: undefined;
-  Login: undefined;
+  Welcome: undefined;
   Signup: undefined;
+  Login: undefined;
+  Home: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function App(): React.JSX.Element {
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  const checkUserSession = async () => {
+    const { data: sessionData, error } = await supabase.auth.getSession();
+    if (sessionData?.session) {
+      setIsAuthenticated(true); // User is logged in
+    } else {
+      setIsAuthenticated(false); // No active session
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    checkUserSession();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View style={styles.splashContainer}>
+        <ActivityIndicator size="large" color="#007BFF" />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
-      <Stack.Screen name="Login" component={Login} />
+      <Stack.Navigator initialRouteName={isAuthenticated ? 'Home' : 'Welcome'}>
+        <Stack.Screen name="Welcome" component={Welcome} />
         <Stack.Screen name="Signup" component={Signup} />
+        <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="Home" component={Home} />
-
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
+  splashContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
 });
 
