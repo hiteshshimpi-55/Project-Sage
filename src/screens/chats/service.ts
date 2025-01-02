@@ -150,6 +150,7 @@ export class ChatService {
             created_by: currentUserId,
             type: 'one-to-many'
         }
+        console.log('Creating group chat:', payload);
 
         const { data, error } = await supabase.from('chat').insert(payload).select('id').single();
         if (error) {

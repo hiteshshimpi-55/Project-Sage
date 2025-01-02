@@ -2,10 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, TextInput, Modal } from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { ChatListUser, ChatService } from './service';
-import { useUser } from '../../hooks/UserContext';
 import { RootStackParamList } from '../../App';
-import supabase from '../../core/supabase';
-import { User } from '@supabase/supabase-js';
 
 const ChatListing: React.FC = () => {
   const [users, setUsers] = useState<ChatListUser[]>([]);
@@ -13,7 +10,6 @@ const ChatListing: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [currentUserId,setCurrentUserId] = useState<string>('');
-  const [currentChatId,setCurrentChatId] = useState<string>('');
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   useEffect(() => {
@@ -23,7 +19,7 @@ const ChatListing: React.FC = () => {
   const loadUsers = async () => {
     try {
       const currentUserId = await ChatService.getCurrentUserId();
-
+      setCurrentUserId(currentUserId!);
       if (currentUserId) {
         const fetchedUsers = await ChatService.getAllUsers(currentUserId);
         console.log('Fetched users:', fetchedUsers);
@@ -45,7 +41,7 @@ const ChatListing: React.FC = () => {
     if (groupName.trim()) {
       try{
         const chatId = await ChatService.createGroupChat(currentUserId, groupName);
-        setCurrentChatId(chatId!);
+        loadUsers();
       }catch(error){
         console.error('Error creating group:', error);
       }

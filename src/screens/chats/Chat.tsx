@@ -298,9 +298,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddToGroup}>
+       { route.params.type === 'one-to-many' && <TouchableOpacity style={styles.addButton} onPress={handleAddToGroup}>
           <Text style={styles.addButtonText}>Add to Group</Text>
-        </TouchableOpacity>
+        </TouchableOpacity>}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
