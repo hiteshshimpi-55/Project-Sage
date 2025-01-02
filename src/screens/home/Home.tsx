@@ -1,47 +1,34 @@
-import React from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import supabase from '../../core/supabase';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { RootStackParamList } from '../../App'; // Import your navigation types
-import Button from '../../components/atoms/Button'; // Import your custom Button component
+import TopBar from '../../components/molecules/TopBar';
+import BottomBar from '../../components/molecules/BottomBar';
+import ChatListing from '../../screens/chats/ChatListing';
 
 const Home: React.FC = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      Alert.alert('Error', 'Failed to log out. Please try again.');
-    } else {
-      Alert.alert('Success', 'You have been logged out.');
-      navigation.navigate('Welcome'); // Navigate to Welcome screen
-    }
-  };
+  useEffect(() => {
+    const checkRole = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      const role = session?.session?.user?.user_metadata?.role;
+      setIsAdmin(role === 'admin');
+    };
+    checkRole();
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Hello!</Text>
-      <Text style={styles.subtitle}>This is my app.</Text>
-      <Button
-        title="Log Out"
-        onPress={handleLogout}
-        style={styles.logoutButton}
-      />
-      <Button
-        title="Chat"
-        onPress={() => navigation.navigate('ChatListing')}
-        style={styles.chatButton}
-      />
-      <Button
-        title="Admin Dashboard"
-        onPress={() => navigation.navigate('AdminDashboard')}
-        style={styles.chatButton}
-      />
-      <Button
-        title="Generate Meeting Link"
-        onPress={() => navigation.navigate('MeetLink')}
-        style={styles.chatButton}
-      />
+      {/* Top Bar */}
+      <TopBar isAdmin={isAdmin} />
+
+      {/* Main Content */}
+      <View style={styles.content}>
+        <ChatListing />
+      </View>
+
+      {/* Bottom Bar */}
+      <BottomBar />
     </View>
   );
 };
@@ -51,25 +38,10 @@ export default Home;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 20,
-  },
-  logoutButton: {
-    backgroundColor: '#FF0000', // Customize the button color for logout
-  },
-  chatButton: {
-    marginTop: 10,
-    backgroundColor: '#007BFF', // Customize the button color for logout
+  content: {
+    flex: 1,
+    padding: 10,
   },
 });
