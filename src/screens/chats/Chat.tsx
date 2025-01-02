@@ -10,6 +10,7 @@ import {
   Platform,
   SafeAreaView,
   Keyboard,
+  Alert,
 } from 'react-native';
 import supabase from '../../core/supabase';
 import { ChatService, Message } from './service';
@@ -31,7 +32,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const [currentChatUserId, setCurrentChatUserId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Initialize chat and user states
   const initialize = useCallback(async () => {
     try {
       const _currentUserId = await ChatService.getCurrentUserId();
@@ -40,47 +40,60 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
       }
       setCurrentUserId(_currentUserId);
 
-      const existingChat = await ChatService.checkIfChatExists(
-        _currentUserId,
-        route.params.id
-      );
-
-      if (existingChat?.chat_id) {
-        console.log('Existing chat found:', existingChat);
-        const chatUserId = await ChatService.getChatUserId(
+      if (route.params.type === 'one-to-one') {
+        const existingChat = await ChatService.checkIfChatExists(
           _currentUserId,
-          existingChat.chat_id
+          route.params.id
         );
-        if (chatUserId) {
-          console.log('Chat user ID:', chatUserId);
-          setCurrentChatId(existingChat.chat_id);
-          setCurrentChatUserId(chatUserId);
-        } else {
-          const newChatUserId = await ChatService.createChatUser(
+
+        if (existingChat?.chat_id) {
+          console.log('Existing chat found:', existingChat);
+          const chatUserId = await ChatService.getChatUserId(
             _currentUserId,
             existingChat.chat_id
           );
-          console.log('New chat user ID:', newChatUserId);
-          setCurrentChatId(existingChat.chat_id);
-          setCurrentChatUserId(newChatUserId);
+          if (chatUserId) {
+            console.log('Chat user ID:', chatUserId);
+            setCurrentChatId(existingChat.chat_id);
+            setCurrentChatUserId(chatUserId);
+          } else {
+            const newChatUserId = await ChatService.createChatUser(
+              _currentUserId,
+              existingChat.chat_id
+            );
+            console.log('New chat user ID:', newChatUserId);
+            setCurrentChatId(existingChat.chat_id);
+            setCurrentChatUserId(newChatUserId);
+          }
+        } else {
+          const newChatId = await ChatService.createOneToOneChat(
+            route.params.id,
+            _currentUserId
+          );
+
+          if (newChatId) {
+            console.log('New chat ID:', newChatId);
+            const newChatUserId = await ChatService.createChatUser(
+              _currentUserId,
+              newChatId
+            );
+
+            setCurrentChatId(newChatId);
+            setCurrentChatUserId(newChatUserId);
+          } else {
+            throw new Error('Failed to create a new chat.');
+          }
         }
       } else {
-        const newChatId = await ChatService.createOneToOneChat(
-          route.params.id,
-          _currentUserId
+        console.log('type is one-to-many');
+        const chatUserId = await ChatService.getChatUserId(
+          _currentUserId,
+          route.params.id
         );
-
-        if (newChatId) {
-          console.log('New chat ID:', newChatId);
-          const newChatUserId = await ChatService.createChatUser(
-            _currentUserId,
-            newChatId
-          );
-          setCurrentChatId(newChatId);
-          setCurrentChatUserId(newChatUserId);
-        } else {
-          throw new Error('Failed to create a new chat.');
-        }
+        console.log('Chat user ID:', chatUserId);
+        console.log('Chat ID:', route.params.id);
+        setCurrentChatId(route.params.id);
+        setCurrentChatUserId(chatUserId);
       }
     } catch (error) {
       console.error('Error initializing chat:', error);
@@ -159,9 +172,67 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     }
   };
 
+  // Handle adding a user to the group
+  const handleAddToGroup = async () => {
+    if (!currentChatId) {
+      Alert.alert('Error', 'No active chat found.');
+      return;
+    }
+
+    try {
+      // Fetch a list of users
+      const users = await ChatService.getAllUsers(currentUserId!);
+
+      if (!users) {
+        Alert.alert('Error', 'Failed to fetch users.');
+        return;
+      }
+
+      if (users.length === 0) {
+        Alert.alert('Error', 'No users available to add.');
+        return;
+      }
+
+      // Show a list of users to select
+      const userOptions = users.map((user) => ({
+        label: `${user.name} (${user.phone})`,
+        value: user.id,
+      }));
+
+      Alert.alert(
+        'Select User',
+        'Choose a user to add to the group:',
+        userOptions.map((option) => ({
+          text: option.label,
+          onPress: async () => {
+            try {
+              const { error: addError } = await supabase.from('chat_user').insert({
+                chat_id: currentChatId,
+                user_id: option.value,
+              });
+
+              if (addError) {
+                console.error('Error adding user to group:', addError);
+                Alert.alert('Error', 'Failed to add user to the group.');
+              } else {
+                Alert.alert('Success', 'User added to the group successfully.');
+              }
+            } catch (addError) {
+              console.error('Error adding user to group:r', addError);
+              Alert.alert('Error', 'An unexpected error occurred.');
+            }
+          },
+        }))
+      );
+    } catch (fetchError) {
+      console.error('Error fetching user list:', fetchError);
+      Alert.alert('Error', 'An unexpected error occurred while fetching users.');
+    }
+  };
+
+
   // Render a single message
   const renderMessage = ({ item }: { item: Message }) => {
-
     const isCurrentUser = item.created_by === currentChatUserId;
 
     return (
@@ -227,6 +298,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity style={styles.addButton} onPress={handleAddToGroup}>
+          <Text style={styles.addButtonText}>Add to Group</Text>
+        </TouchableOpacity>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -239,7 +313,7 @@ const styles = StyleSheet.create({
   },
   messageList: {
     paddingHorizontal: 10,
-    paddingBottom: 10
+    paddingBottom: 10,
   },
   messageBubble: {
     maxWidth: '80%',
@@ -299,6 +373,18 @@ const styles = StyleSheet.create({
   },
   sendButtonText: {
     color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  addButton: {
+    marginTop: 10,
+    alignSelf: 'center',
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },

@@ -56,7 +56,7 @@ const ChatListing: React.FC = () => {
   const renderUser = ({ item }: { item: ChatListUser }) => (
     <TouchableOpacity
       style={styles.userItem}
-      onPress={() => {navigation.navigate('ChatScreen', { id: item.id! });}}
+      onPress={() => {navigation.navigate('ChatScreen', { id: item.id!,type: item.type! });}}
     >
       <Image
         source={{
