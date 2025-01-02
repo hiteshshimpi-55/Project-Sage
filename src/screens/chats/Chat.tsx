@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   messageList: {
     paddingHorizontal: 10,
-    paddingBottom: 10,
+    paddingBottom: 10
   },
   messageBubble: {
     maxWidth: '80%',
@@ -280,7 +280,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#E8E8E8',
     paddingHorizontal: 10,
     paddingVertical: 10,
-    position: 'absolute',
     bottom: 0,
   },
   input: {
