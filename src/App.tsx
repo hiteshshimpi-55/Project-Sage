@@ -32,6 +32,7 @@ export type RootStackParamList = {
   AdminDashboard: undefined;
   ChatScreen: {
     id: string;
+    type:string;
   };
   ChatListing: undefined;
   MeetLink: undefined;

@@ -10,12 +10,14 @@ import {
   Platform,
   SafeAreaView,
   Keyboard,
+  Alert,
 } from 'react-native';
 import supabase from '../../core/supabase';
 import { ChatService, Message } from './service';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from 'src/App';
 
+// Types
 
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
 
@@ -23,52 +25,118 @@ interface ChatScreenProps {
   route: ChatScreenRouteProp;
 }
 
-const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
-
+const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [currentChatUserId, setCurrentChatUserId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchUserId = async () => {
-      const chatUserId = await ChatService.getChatUserId('');
-      console.log('Current user ID:', chatUserId);
-      setCurrentUserId(chatUserId);
-    };
-    fetchUserId();
-  }, []);
-  
-  
-  // Replace with actual user ID
-  const chatId = 'b873fbcf-c501-4a7a-97be-01c4469830f5'; // Replace with actual chat ID
+  const initialize = useCallback(async () => {
+    try {
+      const _currentUserId = await ChatService.getCurrentUserId();
+      if (!_currentUserId) {
+        throw new Error('Unable to fetch current user ID.');
+      }
+      setCurrentUserId(_currentUserId);
 
-  // Fetch initial messages
-  const fetchMessages = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('message')
-      .select('*')
-      .eq('chat_id', chatId)
-      .order('created_at', { ascending: false })
-      .limit(50);
+      if (route.params.type === 'one-to-one') {
+        const existingChat = await ChatService.checkIfChatExists(
+          _currentUserId,
+          route.params.id
+        );
 
-    if (error) {
-      console.error('Error fetching messages:', error);
-      return;
+        if (existingChat?.chat_id) {
+          console.log('Existing chat found:', existingChat);
+          const chatUserId = await ChatService.getChatUserId(
+            _currentUserId,
+            existingChat.chat_id
+          );
+          if (chatUserId) {
+            console.log('Chat user ID:', chatUserId);
+            setCurrentChatId(existingChat.chat_id);
+            setCurrentChatUserId(chatUserId);
+          } else {
+            const newChatUserId = await ChatService.createChatUser(
+              _currentUserId,
+              existingChat.chat_id
+            );
+            console.log('New chat user ID:', newChatUserId);
+            setCurrentChatId(existingChat.chat_id);
+            setCurrentChatUserId(newChatUserId);
+          }
+        } else {
+          const newChatId = await ChatService.createOneToOneChat(
+            route.params.id,
+            _currentUserId
+          );
+
+          if (newChatId) {
+            console.log('New chat ID:', newChatId);
+            const newChatUserId = await ChatService.createChatUser(
+              _currentUserId,
+              newChatId
+            );
+
+            setCurrentChatId(newChatId);
+            setCurrentChatUserId(newChatUserId);
+          } else {
+            throw new Error('Failed to create a new chat.');
+          }
+        }
+      } else {
+        console.log('type is one-to-many');
+        const chatUserId = await ChatService.getChatUserId(
+          _currentUserId,
+          route.params.id
+        );
+        console.log('Chat user ID:', chatUserId);
+        console.log('Chat ID:', route.params.id);
+        setCurrentChatId(route.params.id);
+        setCurrentChatUserId(chatUserId);
+      }
+    } catch (error) {
+      console.error('Error initializing chat:', error);
     }
+  }, [route.params.id]);
 
-    setMessages(data || []);
-  }, [chatId]);
+  // Fetch messages
+  const fetchMessages = useCallback(async () => {
+    if (!currentChatId) return;
 
-  // Subscribe to real-time messages
+    try {
+      const { data, error } = await supabase
+        .from('message')
+        .select('*')
+        .eq('chat_id', currentChatId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+        return;
+      }
+
+      setMessages(data || []);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  }, [currentChatId]);
+
+  // Subscribe to real-time updates
   useEffect(() => {
-    fetchMessages();
+    if (!currentChatId) return;
 
     const channel = supabase
       .channel('realtime:message')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'message', filter: `chat_id=eq.${chatId}` },
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'message',
+          filter: `chat_id=eq.${currentChatId}`,
+        },
         (payload) => {
           const newMessage = payload.new as Message;
           setMessages((prevMessages) => [newMessage, ...prevMessages]);
@@ -79,19 +147,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchMessages, chatId]);
+  }, [currentChatId]);
 
   // Handle sending a message
   const handleSend = async () => {
-    if (!inputText.trim()) return;
-
-
+    if (!inputText.trim() || !currentChatId || !currentUserId) return;
 
     try {
       const { error } = await supabase.from('message').insert({
         text: inputText.trim(),
-        chat_id: chatId,
-        created_by: currentUserId!,
+        chat_id: currentChatId,
+        created_by: currentChatUserId,
         type: 'text',
         media_url: '',
       });
@@ -100,15 +166,74 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         console.error('Error sending message:', error);
       } else {
         setInputText('');
-        Keyboard.dismiss(); // Dismiss keyboard after sending
       }
     } catch (error) {
       console.error('Error sending message:', error);
     }
   };
 
+  // Handle adding a user to the group
+  const handleAddToGroup = async () => {
+    if (!currentChatId) {
+      Alert.alert('Error', 'No active chat found.');
+      return;
+    }
+
+    try {
+      // Fetch a list of users
+      const users = await ChatService.getAllUsers(currentUserId!);
+
+      if (!users) {
+        Alert.alert('Error', 'Failed to fetch users.');
+        return;
+      }
+
+      if (users.length === 0) {
+        Alert.alert('Error', 'No users available to add.');
+        return;
+      }
+
+      // Show a list of users to select
+      const userOptions = users.map((user) => ({
+        label: `${user.name} (${user.phone})`,
+        value: user.id,
+      }));
+
+      Alert.alert(
+        'Select User',
+        'Choose a user to add to the group:',
+        userOptions.map((option) => ({
+          text: option.label,
+          onPress: async () => {
+            try {
+              const { error: addError } = await supabase.from('chat_user').insert({
+                chat_id: currentChatId,
+                user_id: option.value,
+              });
+
+              if (addError) {
+                console.error('Error adding user to group:', addError);
+                Alert.alert('Error', 'Failed to add user to the group.');
+              } else {
+                Alert.alert('Success', 'User added to the group successfully.');
+              }
+            } catch (addError) {
+              console.error('Error adding user to group:r', addError);
+              Alert.alert('Error', 'An unexpected error occurred.');
+            }
+          },
+        }))
+      );
+    } catch (fetchError) {
+      console.error('Error fetching user list:', fetchError);
+      Alert.alert('Error', 'An unexpected error occurred while fetching users.');
+    }
+  };
+
+
+  // Render a single message
   const renderMessage = ({ item }: { item: Message }) => {
-    const isCurrentUser = item.created_by === currentUserId;
+    const isCurrentUser = item.created_by === currentChatUserId;
 
     return (
       <View
@@ -134,6 +259,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
       </View>
     );
   };
+
+  // Initial setup
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -164,6 +298,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity style={styles.addButton} onPress={handleAddToGroup}>
+          <Text style={styles.addButtonText}>Add to Group</Text>
+        </TouchableOpacity>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -177,7 +314,6 @@ const styles = StyleSheet.create({
   messageList: {
     paddingHorizontal: 10,
     paddingBottom: 10,
-    marginBottom: 70,
   },
   messageBubble: {
     maxWidth: '80%',
@@ -218,7 +354,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#E8E8E8',
     paddingHorizontal: 10,
     paddingVertical: 10,
-    position: 'absolute',
     bottom: 0,
   },
   input: {
@@ -238,6 +373,18 @@ const styles = StyleSheet.create({
   },
   sendButtonText: {
     color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  addButton: {
+    marginTop: 10,
+    alignSelf: 'center',
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
