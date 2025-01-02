@@ -7,9 +7,11 @@ interface ChatsCheckResponse {
     created_by: string;
 }
 
-interface UpdateUserRequest {
+export interface ChatListUser {
+    id?: string;
+    type?: string;
     name?: string;
-    email?: string;
+    phone?: string;
 }
 
 export interface Message {
@@ -33,7 +35,7 @@ export class ChatService {
         }
         return user?.id || null;
     }
-    public static async getAllUsers(user_id: string): Promise<User[]> {
+    public static async getAllUsers(user_id: string): Promise<ChatListUser[]> {
 
         const { data, error } = await adminAuthClient.listUsers();
 
@@ -42,8 +44,14 @@ export class ChatService {
             return [];
         }
 
-        return data.users.filter(user => user.id !== user_id);
+        const filteredUsers = data.users.filter(user => user.id !== user_id);
 
+        return filteredUsers.map((user: User) => ({
+            id: user.id,
+            type: 'one-to-one',
+            name: user.user_metadata?.full_name || 'Unknown',
+            phone: user.phone || 'N/A',
+        }));
     }
 
     public static async getChatUserId(userId: string, chatId: string): Promise<string | null> {
@@ -135,5 +143,76 @@ export class ChatService {
         }
         return data?.id;
     }
+
+    public static async createGroupChat(currentUserId: string, groupName: string): Promise<string | null> {
+        const payload = {
+            name: groupName,
+            created_by: currentUserId,
+            type: 'one-to-many'
+        }
+
+        const { data, error } = await supabase.from('chat').insert(payload).select('id').single();
+        if (error) {
+            console.error('Error creating chat:', error);
+            return null;
+        }
+
+        const {data:chatCreateData,error: chatUserError} = await supabase.from('chat_user').insert({chat_id: data?.id,user_id: currentUserId}).select('id').single();
+        if (chatUserError) {
+            console.error('Error creating chat user:', chatUserError);
+            return null;
+        }
+        return chatCreateData?.id;
+    }
+
+    public static async getGroups(currentUserId: string): Promise<ChatListUser[]> {
+        try {
+            // Step 1: Fetch chat_user records for the current user
+            const { data: chatUserData, error: chatUserError } = await supabase
+                .from('chat_user')
+                .select('*')
+                .eq('user_id', currentUserId);
+    
+            if (chatUserError) {
+                console.error("Error fetching chat_user data:", chatUserError);
+                return [];
+            }
+    
+            // Extract chat IDs from the chat_user records
+            const chatIds = chatUserData.map((chat: any) => chat.chat_id);
+    
+            if (chatIds.length === 0) {
+                console.log("No chats found for the user.");
+                return [];
+            }
+    
+            // Step 2: Fetch chats using the extracted chat IDs
+            const { data: chatData, error: chatError } = await supabase
+                .from('chat')
+                .select('*')
+                .in('id', chatIds)
+                .eq('type', 'one-to-many');
+    
+            if (chatError) {
+                console.error("Error fetching chats:", chatError);
+                return [];
+            }
+    
+            console.log('Fetched groups:', chatData);
+
+            const final_data = chatData.map((chat: any) => {
+                return {
+                    id: chat.id,
+                    name: chat.name,
+                    type:'one-to-many',
+                }
+            })
+            return final_data || [];
+        } catch (error) {
+            console.error("Unexpected error in getGroups:", error);
+            return [];
+        }
+    }
+    
 
 }
