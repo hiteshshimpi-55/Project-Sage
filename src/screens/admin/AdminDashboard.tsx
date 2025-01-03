@@ -50,9 +50,10 @@ const AdminDashboard: React.FC = () => {
 
   const handleActivateUser = async (userId: string) => {
     try {
-      await UserService.activateUser(userId);
+      const activationTimestamp = new Date().toISOString(); // Current timestamp
+      await UserService.activateUser(userId, activationTimestamp);
       Alert.alert('Success', 'User activated successfully.');
-      fetchUsers();
+      fetchUsers(); // Refresh the users list
     } catch (error) {
       Alert.alert('Error', 'Failed to activate user.');
     }

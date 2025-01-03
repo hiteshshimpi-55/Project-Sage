@@ -1,4 +1,4 @@
-import { adminAuthClient } from "../core/supabase";
+import supabase, { adminAuthClient } from "../core/supabase";
 
 export class UserService {
   public static async getAllUsers(currentUserId: string): Promise<any[]> {
@@ -18,11 +18,18 @@ export class UserService {
     }));
   }
 
-  public static async activateUser(userId: string): Promise<void> {
+  public static async activateUser(userId: string, activationTimestamp: string): Promise<void> {
     const { error } = await adminAuthClient.updateUserById(userId, {
-      user_metadata: { status: 'active' },
+      user_metadata: { status: 'active', activation_date: activationTimestamp },
     });
     if (error) throw error;
+  
+    // Optionally, update the custom_users table if you're using it
+    const { error: customError } = await supabase
+      .from('custom_users')
+      .update({ status: 'active', activation_date: activationTimestamp })
+      .eq('id', userId);
+    if (customError) throw customError;
   }
 
   public static async makeAdmin(userId: string): Promise<void> {
