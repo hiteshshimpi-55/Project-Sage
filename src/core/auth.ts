@@ -22,7 +22,7 @@ export const signUp = async ({ phone, password, fullName, gender, age, dob }: Si
       options: {
         data: {
           full_name: fullName,
-          role: 'super admin', // Default role
+          role: 'admin', // Default role
           status: 'inactive', // Default status
           gender: gender || null,
           age: age || null,
