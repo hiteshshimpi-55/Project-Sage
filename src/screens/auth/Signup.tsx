@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Alert, StyleSheet } from 'react-native';
 import { signUp } from '../../core/auth';
+import supabase from '../../core/supabase'; // Import your Supabase instance
 import Input from '../../components/atoms/Input';
 import Button from '../../components/atoms/Button';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
@@ -15,7 +16,38 @@ const Signup: React.FC = () => {
   const [dob, setDob] = useState<string>(''); // YYYY-MM-DD
   const [loading, setLoading] = useState<boolean>(false);
 
-const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
+  const insertIntoCustomUsers = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('custom_users')
+        .insert([
+          {
+            id: userId,
+            full_name: fullName,
+            phone: phone,
+            role: 'user', // Default role
+            status: 'inactive', // Default status
+            gender: gender || null,
+            age: age ? parseInt(age, 10) : null,
+            dob: dob || null,
+          },
+        ]);
+
+      if (error) {
+        console.error('Error inserting into custom_users:', error);
+        Alert.alert('Error', 'Failed to save user details.');
+      } else {
+        Alert.alert('Success', 'User details saved successfully!');
+        navigation.navigate('Home');
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      Alert.alert('Error', 'Something went wrong.');
+    }
+  };
+
   const handleSignup = async () => {
     if (!fullName || !phone || !password) {
       Alert.alert('Error', 'Please fill all the required fields.');
@@ -23,7 +55,7 @@ const navigation = useNavigation<NavigationProp<RootStackParamList>>();
     }
 
     setLoading(true);
-    const { error } = await signUp({
+    const { data, error } = await signUp({
       phone,
       password,
       fullName,
@@ -33,11 +65,18 @@ const navigation = useNavigation<NavigationProp<RootStackParamList>>();
     });
 
     if (error) {
+      console.error('Signup error:', error);
       Alert.alert('Error', error.message || 'Failed to sign up.');
-    } else {
-      Alert.alert('Success', 'Signup successful!');
-      navigation.navigate('Home');
+      setLoading(false);
+      return;
     }
+
+    if (data?.user?.id) {
+      await insertIntoCustomUsers(data.user.id);
+    } else {
+      Alert.alert('Error', 'Failed to retrieve user ID.');
+    }
+
     setLoading(false);
   };
 
