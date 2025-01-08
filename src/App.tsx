@@ -4,7 +4,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   View,
-  Text,
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -13,32 +12,23 @@ import supabase from './core/supabase';
 // Screens
 import Signup from './screens/auth/Signup';
 import Login from './screens/auth/Login';
-import Welcome from './screens/auth/Welcome';
-import Home from './screens/home/Home';
 import ChatScreen from './screens/chats/Chat';
 import AdminDashboard from './screens/admin/AdminDashboard';
-import { UserProvider } from './hooks/UserContext';
-import ChatListing from './screens/chats/ChatListing';
 import AdminMeeting from './screens/admin/AdminMeet';
-import ChannelScreen from './screens/channels/ChannelScreen';
-import CalendarScreen from './screens/calendar/CalendarScreen';
-import ProfileScreen from './screens/profile/ProfileScreen';
+import { UserProvider } from './hooks/UserContext';
+import Home from './screens/home/Home';
+import theme from '@utils/theme';
 
 export type RootStackParamList = {
-  Welcome: undefined;
   Signup: undefined;
   Login: undefined;
-  Home: undefined;
   AdminDashboard: undefined;
   ChatScreen: {
     id: string;
-    type:string;
+    type: string;
   };
-  ChatListing: undefined;
+  Home: undefined;
   MeetLink: undefined;
-  ChannelScreen: undefined;
-  CalendarScreen: undefined;
-  ProfileScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -48,11 +38,11 @@ function App(): React.JSX.Element {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   const checkUserSession = async () => {
-    const { data: sessionData, error } = await supabase.auth.getSession();
+    const { data: sessionData } = await supabase.auth.getSession();
     if (sessionData?.session) {
-      setIsAuthenticated(true); // User is logged in
+      setIsAuthenticated(true); 
     } else {
-      setIsAuthenticated(false); // No active session
+      setIsAuthenticated(false); 
     }
     setIsLoading(false);
   };
@@ -64,7 +54,7 @@ function App(): React.JSX.Element {
   if (isLoading) {
     return (
       <View style={styles.splashContainer}>
-        <ActivityIndicator size="large" color="#007BFF" />
+        <ActivityIndicator size="large" color={theme.colors.primary_500} />
       </View>
     );
   }
@@ -73,22 +63,20 @@ function App(): React.JSX.Element {
     <UserProvider>
       <NavigationContainer>
         <SafeAreaView style={styles.safeArea}>
-          <Stack.Navigator initialRouteName={isAuthenticated ? 'Home' : 'Welcome'}>
-            <Stack.Screen name="Welcome" component={Welcome} />
-            <Stack.Screen name="ChatScreen" component={ChatScreen} />
+          <Stack.Navigator initialRouteName={isAuthenticated ? 'Home' : 'Login'}>
+            {/* Auth and Other Screens */}
             <Stack.Screen name="Signup" component={Signup} />
             <Stack.Screen name="Login" component={Login} />
-            <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
-            <Stack.Screen
-              name="AdminDashboard"
-              component={AdminDashboard}
-              options={{ title: 'Admin Dashboard' }}
-            />
-            <Stack.Screen name="ChatListing" component={ChatListing} />
+            <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+            <Stack.Screen name="ChatScreen" component={ChatScreen} />
             <Stack.Screen name="MeetLink" component={AdminMeeting} />
-            <Stack.Screen name="ChannelScreen" component={ChannelScreen} />
-            <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
-            <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+
+            {/* Main App with Tabs */}
+            <Stack.Screen
+              name="Home"
+              component={Home}
+              options={{ headerShown: false }}
+            />
           </Stack.Navigator>
         </SafeAreaView>
       </NavigationContainer>

@@ -40,7 +40,7 @@ export const signUp = async ({ phone, password, fullName, gender, age, dob }: Si
 export const login = async (phone: string, password: string): Promise<AuthResponse> => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
-      phone: `+${phone}`,
+      phone: `+91${phone}`,
       password,
     });
     return { data, error };

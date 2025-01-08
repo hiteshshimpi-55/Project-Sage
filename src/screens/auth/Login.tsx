@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Alert, StyleSheet } from 'react-native';
+import { View, Text, Alert, StyleSheet, Image } from 'react-native';
 import { login } from '../../core/auth';
 import Input from '../../components/atoms/Input';
 import Button from '../../components/atoms/Button';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
-import { setUserContext, useUser } from '../../hooks/UserContext';
-import supabase from '../../core/supabase';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import supabase from '../../core/supabase';
+import theme from '@utils/theme';
 
 const Login: React.FC = () => {
   const [phone, setPhone] = useState<string>('');
@@ -22,7 +22,7 @@ const Login: React.FC = () => {
     }
 
     setLoading(true);
-    const {data, error } = await login(phone, password);
+    const { data, error } = await login(phone, password);
 
     if (error) {
       Alert.alert('Error', error.message || 'Login failed.');
@@ -34,9 +34,8 @@ const Login: React.FC = () => {
     setLoading(false);
   };
 
-
   const getCurrentUser = async () => {
-    const {data:{user},error} = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
     console.log('Current user:', user);
     if (user) {
       navigation.navigate('Home');
@@ -46,13 +45,35 @@ const Login: React.FC = () => {
   useEffect(() => {
     getCurrentUser();
   }, []);
-  
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
-      <Input placeholder="Phone (include country code)" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
-      <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
-      <Button title="Log In" onPress={handleLogin} loading={loading} />
+      <Text style={styles.title}>Welcome Back!</Text>
+      <Text style={styles.subtitle}>Log in to continue</Text>
+
+      <Input
+        label="Phone Number"
+        variant="phone"
+        placeholder="Enter your phone number"
+        value={phone}
+        onChangeText={setPhone}
+      />
+      <Input
+        label="Password"
+        variant="password"
+        placeholder="Enter your password"
+        value={password}
+        onChangeText={setPassword}
+      />
+
+      <Button disabled={!password || !phone} title="Log In" onPress={handleLogin} loading={loading}/>
+
+      <Text style={styles.footerText}>
+        Don’t have an account?{' '}
+        <Text style={styles.signupText} onPress={() => navigation.navigate('Signup')}>
+          Sign Up
+        </Text>
+      </Text>
     </View>
   );
 };
@@ -62,14 +83,41 @@ export default Login;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f9f9f9',
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#fff',
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    alignSelf: 'center',
+    marginBottom: 30,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
-    marginBottom: 20,
+    color: '#333',
+    fontFamily: theme.fonts.satoshi_bold,
     textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: theme.fonts.satoshi_regular,
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  input: {
+    marginBottom: 15,
+  },
+  footerText: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 20,
+    fontFamily: theme.fonts.satoshi_regular,
+  },
+  signupText: {
+    color: theme.colors.primary_600,
+    fontWeight: 'semibold',
   },
 });

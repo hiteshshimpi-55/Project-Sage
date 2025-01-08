@@ -1,3 +1,4 @@
+import theme from '@utils/theme';
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 
@@ -25,7 +26,7 @@ const Button: React.FC<ButtonProps> = ({ title, onPress, loading = false, disabl
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#007BFF',
+    backgroundColor: theme.colors.primary_600,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
@@ -36,7 +37,8 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: theme.fonts.satoshi_bold,
+    fontWeight: 'semibold',
   },
 });
 

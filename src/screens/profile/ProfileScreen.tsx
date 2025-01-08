@@ -1,156 +1,186 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, Button, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
+  ScrollView,
+} from 'react-native';
 import supabase from '../../core/supabase';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { CommonActions, NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
+import theme from '../../utils/theme';
+import { SignOut } from 'phosphor-react-native';
 
-const ProfileScreen: React.FC = () => {
+const ProfileScreen = () => {
   const [user, setUser] = useState<any>(null);
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [fullName, setFullName] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
-
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (data?.user) {
-        setUser(data.user);
-        setFullName(data.user.user_metadata?.full_name || '');
-        setPhone(data.user.phone || '');
-      } else if (error) {
-        Alert.alert('Error', 'Failed to fetch user details.');
-      }
-    };
-
     fetchUser();
   }, []);
 
-  const handleUpdate = async () => {
-    setLoading(true);
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        full_name: fullName,
-      },
-    });
-
-    setLoading(false);
-
-    if (error) {
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
-    } else {
-      Alert.alert('Success', 'Profile updated successfully!');
-      setIsEditing(false);
-      const { data } = await supabase.auth.getUser();
-      setUser(data?.user);
+  const fetchUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
     }
   };
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      Alert.alert('Error', 'Failed to log out. Please try again.');
-    } else {
-      Alert.alert('Success', 'You have been logged out.');
-      navigation.navigate('Welcome');
+    try {
+      await supabase.auth.signOut();
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
     }
   };
 
   if (!user) {
     return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
+      <View style={styles.centeredContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary_500} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <Image
+          source={{ uri: 'https://picsum.photos/200/300' }}
+          style={styles.avatar}
+        />
+        <Text style={styles.userName}>{user.user_metadata?.full_name || 'User'}</Text>
+      </View>
 
-      {isEditing ? (
-        <>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            value={fullName}
-            onChangeText={setFullName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Phone"
-            value={phone}
-            onChangeText={setPhone}
-            editable={false} // Phone is non-editable in this case
-          />
-          <Button title="Save Changes" onPress={handleUpdate} disabled={loading} />
-          <Button title="Cancel" onPress={() => setIsEditing(false)} />
-        </>
-      ) : (
-        <>
-          <Text style={styles.label}>Full Name: {user.user_metadata?.full_name || 'N/A'}</Text>
-          <Text style={styles.label}>Phone: {user.phone || 'N/A'}</Text>
+      <View style={styles.content}>
+        <Section title="Profile Details">
+          <InfoItem label="Full Name" value={user.user_metadata?.full_name || 'Not set'} />
+          <InfoItem label="Phone" value={user.phone || 'Not set'} />
+        </Section>
 
-          <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
-            <Text style={styles.editButtonText}>Edit Details</Text>
-          </TouchableOpacity>
-        </>
-      )}
+        <Section title="Account Information">
+          <InfoItem label="Member Since" value={new Date(user.created_at).toLocaleDateString()} />
+          <InfoItem label="Age" value={user.user_metadata?.age ?? 'N/A'} />
+          <InfoItem label="Gender" value={user.user_metadata?.gender ?? 'N/A'} />
+        </Section>
+      </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Log Out</Text>
+        <SignOut size={24} color={theme.colors.text_500} weight="bold" />
+        <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
-export default ProfileScreen;
+const Section = ({ title, children }: { title?: string; children: React.ReactNode }) => (
+  <View style={styles.section}>
+    {title && <Text style={styles.sectionTitle}>{title}</Text>}
+    {children}
+  </View>
+);
+
+const InfoItem = ({ label, value }: { label: string; value: string }) => (
+  <View style={styles.infoItem}>
+    <Text style={styles.label}>{label}</Text>
+    <Text style={styles.value}>{value}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.white,
   },
-  title: {
+  centeredContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.white,
+  },
+  header: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    backgroundColor: theme.colors.primary_50,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: theme.colors.white,
+  },
+  userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
+    fontFamily: theme.fonts.satoshi_medium,
+    color: theme.colors.primary_900,
+    marginTop: 16,
+  },
+  content: {
+    padding: 20,
+  },
+  section: {
+    marginBottom: 24,
+    padding: 16,
+    backgroundColor: theme.colors.white,
+    borderRadius: 12,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.satoshi_medium,
+    color: theme.colors.primary_900,
+    marginBottom: 16,
+  },
+  infoItem: {
+    marginBottom: 16,
   },
   label: {
+    fontSize: 14,
+    fontFamily: theme.fonts.satoshi_medium,
+    color: theme.colors.text_500,
+    marginBottom: 4,
+  },
+  value: {
     fontSize: 16,
-    marginBottom: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
-  },
-  editButton: {
-    backgroundColor: '#007BFF',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  editButtonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: 'bold',
+    fontFamily: theme.fonts.satoshi_medium,
+    color: theme.colors.primary_900,
+    fontWeight: '500',
   },
   logoutButton: {
-    backgroundColor: '#FF0000',
-    padding: 10,
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 'auto',
+    gap: 8,
   },
-  logoutButtonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: 'bold',
+  logoutText: {
+    fontSize: 16,
+    fontFamily: theme.fonts.satoshi_medium,
+    color: theme.colors.text_500,
+    fontWeight: '500',
   },
 });
+
+export default ProfileScreen;

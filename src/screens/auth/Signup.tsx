@@ -1,22 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, Alert, StyleSheet } from 'react-native';
+import { View, Text, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { signUp } from '../../core/auth';
-import supabase from '../../core/supabase'; // Import your Supabase instance
+import supabase from '../../core/supabase';
 import Input from '../../components/atoms/Input';
 import Button from '../../components/atoms/Button';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
+import theme from '@utils/theme';
 
 const Signup: React.FC = () => {
   const [fullName, setFullName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [gender, setGender] = useState<string>('');
-  const [age, setAge] = useState<string>(''); // Use string for input
-  const [dob, setDob] = useState<string>(''); // YYYY-MM-DD
+  const [age, setAge] = useState<string>('');
+  const [dob, setDob] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const insertIntoCustomUsers = async (userId: string) => {
     try {
@@ -27,8 +29,8 @@ const Signup: React.FC = () => {
             id: userId,
             full_name: fullName,
             phone: phone,
-            role: 'user', // Default role
-            status: 'inactive', // Default status
+            role: 'user',
+            status: 'inactive',
             gender: gender || null,
             age: age ? parseInt(age, 10) : null,
             dob: dob || null,
@@ -82,14 +84,69 @@ const Signup: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Signup</Text>
-      <Input placeholder="Full Name" value={fullName} onChangeText={setFullName} />
-      <Input placeholder="Phone (include country code)" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
-      <Input placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
-      <Input placeholder="Gender (optional)" value={gender} onChangeText={setGender} />
-      <Input placeholder="Age (optional)" keyboardType="numeric" value={age} onChangeText={setAge} />
-      <Input placeholder="Date of Birth (optional, YYYY-MM-DD)" value={dob} onChangeText={setDob} />
-      <Button title="Sign Up" onPress={handleSignup} loading={loading} />
+      <View style={styles.header}>
+        <Text style={styles.welcomeText}>Create Account</Text>
+        <Text style={styles.subtitle}>Sign up to get started</Text>
+      </View>
+
+      <View style={styles.formContainer}>
+        <Input
+          label="Full Name"
+          variant="text"
+          placeholder="Enter your full name"
+          value={fullName}
+          onChangeText={setFullName}
+        />
+        <Input
+          label="Phone Number"
+          variant="phone"
+          placeholder="Enter your phone number"
+          value={phone}
+          onChangeText={setPhone}
+        />
+        <Input
+          label="Password"
+          variant="password"
+          placeholder="Create a password"
+          value={password}
+          onChangeText={setPassword}
+        />
+        <Input
+          label="Gender"
+          variant="text"
+          placeholder="Enter your gender (optional)"
+          value={gender}
+          onChangeText={setGender}
+        />
+        <Input
+          label="Age"
+          variant="text"
+          placeholder="Enter your age (optional)"
+          value={age}
+          onChangeText={setAge}
+        />
+        <Input
+          label="Date of Birth"
+          variant="text"
+          placeholder="YYYY-MM-DD (optional)"
+          value={dob}
+          onChangeText={setDob}
+        />
+
+        <Button 
+          title="Create Account" 
+          onPress={handleSignup} 
+          loading={loading}
+          disabled={!fullName || !phone || !password}
+        />
+      </View>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Already have an account?</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.loginText}>Log in</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -99,14 +156,45 @@ export default Signup;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f9f9f9',
     padding: 20,
-    justifyContent: 'center',
-    backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 24,
+  header: {
+    marginTop: 40,
+    marginBottom: 40,
+  },
+  welcomeText: {
+    fontSize: 26,
     fontWeight: 'bold',
-    marginBottom: 20,
+    color: theme.colors.text_900,
+    fontFamily: theme.fonts.satoshi_bold,
     textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: theme.colors.text_600,
+    fontFamily: theme.fonts.satoshi_regular,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  formContainer: {
+    marginBottom: 24,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 'auto',
+    paddingVertical: 20,
+  },
+  footerText: {
+    color: theme.colors.text_600,
+    fontFamily: theme.fonts.satoshi_regular,
+  },
+  loginText: {
+    color: theme.colors.primary_600,
+    fontWeight: 'semibold',
+    marginLeft: 4,
+    fontFamily: theme.fonts.satoshi_medium,
   },
 });
