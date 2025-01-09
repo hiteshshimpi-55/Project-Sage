@@ -11,14 +11,17 @@ import {
   SafeAreaView,
   Keyboard,
   Alert,
+  Image,
 } from 'react-native';
 import supabase from '../../core/supabase';
 import { ChatService, Message } from './service';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from 'src/App';
+import theme from '@utils/theme';
+import { PaperPlaneTilt, CaretLeft } from 'phosphor-react-native';
+import { useNavigation } from '@react-navigation/native';
 
 // Types
-
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
 
 interface ChatScreenProps {
@@ -26,11 +29,14 @@ interface ChatScreenProps {
 }
 
 const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
+  const navigation = useNavigation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [currentChatUserId, setCurrentChatUserId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [usernames, setUsernames] = useState<{ [key: string]: string }>({});
+  const [chatUserName, setChatUserName] = useState<string>('');
 
   const initialize = useCallback(async () => {
     try {
@@ -47,23 +53,22 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
         );
 
         if (existingChat?.chat_id) {
-          console.log('Existing chat found:', existingChat);
           const chatUserId = await ChatService.getChatUserId(
             _currentUserId,
             existingChat.chat_id
           );
           if (chatUserId) {
-            console.log('Chat user ID:', chatUserId);
             setCurrentChatId(existingChat.chat_id);
             setCurrentChatUserId(chatUserId);
+            setChatUserName(route.params.name); // Set the user's name for the app bar
           } else {
             const newChatUserId = await ChatService.createChatUser(
               _currentUserId,
               existingChat.chat_id
             );
-            console.log('New chat user ID:', newChatUserId);
             setCurrentChatId(existingChat.chat_id);
             setCurrentChatUserId(newChatUserId);
+            setChatUserName(route.params.name); // Set the user's name for the app bar
           }
         } else {
           const newChatId = await ChatService.createOneToOneChat(
@@ -72,7 +77,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           );
 
           if (newChatId) {
-            console.log('New chat ID:', newChatId);
             const newChatUserId = await ChatService.createChatUser(
               _currentUserId,
               newChatId
@@ -80,27 +84,26 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
 
             setCurrentChatId(newChatId);
             setCurrentChatUserId(newChatUserId);
+            setChatUserName(route.params.name); // Set the user's name for the app bar
           } else {
             throw new Error('Failed to create a new chat.');
           }
         }
       } else {
-        console.log('type is one-to-many');
         const chatUserId = await ChatService.getChatUserId(
           _currentUserId,
           route.params.id
         );
-        console.log('Chat user ID:', chatUserId);
-        console.log('Chat ID:', route.params.id);
         setCurrentChatId(route.params.id);
         setCurrentChatUserId(chatUserId);
+        setChatUserName(route.params.name); // Set the group name for the app bar
       }
+
     } catch (error) {
       console.error('Error initializing chat:', error);
     }
-  }, [route.params.id]);
+  }, [route.params.id, route.params.name]);
 
-  // Fetch messages
   const fetchMessages = useCallback(async () => {
     if (!currentChatId) return;
 
@@ -123,7 +126,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     }
   }, [currentChatId]);
 
-  // Subscribe to real-time updates
+  const fetchAndSetUsernames = useCallback(async () => {
+    if (!currentChatId) return;
+
+    try {
+      const userMap = await ChatService.getAllUsersFromSystemWithChatUserId(currentChatId);
+      setUsernames(userMap);
+    } catch (error) {
+      console.error('Error fetching usernames:', error);
+    }
+  }, [currentChatId]);
+
   useEffect(() => {
     if (!currentChatId) return;
 
@@ -149,7 +162,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     };
   }, [currentChatId]);
 
-  // Handle sending a message
   const handleSend = async () => {
     if (!inputText.trim() || !currentChatId || !currentUserId) return;
 
@@ -172,66 +184,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     }
   };
 
-  // Handle adding a user to the group
-  const handleAddToGroup = async () => {
-    if (!currentChatId) {
-      Alert.alert('Error', 'No active chat found.');
-      return;
-    }
-
-    try {
-      // Fetch a list of users
-      const users = await ChatService.getAllUsers(currentUserId!);
-
-      if (!users) {
-        Alert.alert('Error', 'Failed to fetch users.');
-        return;
-      }
-
-      if (users.length === 0) {
-        Alert.alert('Error', 'No users available to add.');
-        return;
-      }
-
-      // Show a list of users to select
-      const userOptions = users.map((user) => ({
-        label: `${user.name} (${user.phone})`,
-        value: user.id,
-      }));
-
-      Alert.alert(
-        'Select User',
-        'Choose a user to add to the group:',
-        userOptions.map((option) => ({
-          text: option.label,
-          onPress: async () => {
-            try {
-              const { error: addError } = await supabase.from('chat_user').insert({
-                chat_id: currentChatId,
-                user_id: option.value,
-              });
-
-              if (addError) {
-                console.error('Error adding user to group:', addError);
-                Alert.alert('Error', 'Failed to add user to the group.');
-              } else {
-                Alert.alert('Success', 'User added to the group successfully.');
-              }
-            } catch (addError) {
-              console.error('Error adding user to group:r', addError);
-              Alert.alert('Error', 'An unexpected error occurred.');
-            }
-          },
-        }))
-      );
-    } catch (fetchError) {
-      console.error('Error fetching user list:', fetchError);
-      Alert.alert('Error', 'An unexpected error occurred while fetching users.');
-    }
-  };
-
-
-  // Render a single message
   const renderMessage = ({ item }: { item: Message }) => {
     const isCurrentUser = item.created_by === currentChatUserId;
 
@@ -242,6 +194,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
         ]}
       >
+        {route.params.type === 'one-to-many' && !isCurrentUser && usernames[item.created_by] && (
+          <Text style={styles.username}>{usernames[item.created_by]}</Text>
+        )}
         <Text
           style={[
             styles.messageText,
@@ -250,7 +205,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
         >
           {item.text}
         </Text>
-        <Text style={styles.timeText}>
+        <Text style={isCurrentUser ? styles.currentUserTimeText : styles.otherUserTimeText}>
           {new Date(item.created_at).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -260,17 +215,25 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     );
   };
 
-  // Initial setup
   useEffect(() => {
     initialize();
   }, [initialize]);
 
   useEffect(() => {
     fetchMessages();
-  }, [fetchMessages]);
+    fetchAndSetUsernames();
+  }, [fetchMessages, fetchAndSetUsernames]);
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.appBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <CaretLeft size={24} color={theme.colors.text_700} weight="bold" />
+        </TouchableOpacity>
+        <Image source={{ uri: 'https://picsum.photos/200/300' }} style={styles.profileImage} />
+        <Text style={styles.appBarText}>{chatUserName}</Text>
+      </View>
+      <View style={styles.divider} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.container}
@@ -295,21 +258,55 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
             onSubmitEditing={handleSend}
           />
           <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Text style={styles.sendButtonText}>Send</Text>
+            <PaperPlaneTilt weight='fill' size={32} color={theme.colors.primary_600}  />
           </TouchableOpacity>
         </View>
-       { route.params.type === 'one-to-many' && <TouchableOpacity style={styles.addButton} onPress={handleAddToGroup}>
-          <Text style={styles.addButtonText}>Add to Group</Text>
-        </TouchableOpacity>}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-};
+}; 
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.white,
+  },
+  appBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  appBarText: {
+    fontSize: 18,
+    fontFamily: theme.fonts.satoshi_bold,
+    fontWeight: 'semibold',
+    color: theme.colors.text_700,
+  },
+  divider: {
+    height: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.grey_100,
+  },
+  currentUserTimeText: {
+    fontSize: 10,
+    fontFamily: theme.fonts.satoshi_regular,
+    color: theme.colors.white,
+  },
+  otherUserTimeText: {
+    fontSize: 10,
+    fontFamily: theme.fonts.satoshi_regular,
+    color: theme.colors.text_500,
   },
   messageList: {
     paddingHorizontal: 10,
@@ -317,33 +314,38 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '80%',
-    padding: 12,
-    borderRadius: 20,
+    minWidth: '20%',
+    padding: 10,
+    borderRadius: 15,
     marginVertical: 4,
   },
   currentUserBubble: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary_600,
     alignSelf: 'flex-end',
+    alignItems: 'flex-start',
     borderBottomRightRadius: 4,
   },
   otherUserBubble: {
-    backgroundColor: '#E8E8E8',
+    backgroundColor: theme.colors.grey_100,
     alignSelf: 'flex-start',
+    alignItems: 'flex-start',
     borderBottomLeftRadius: 4,
   },
   messageText: {
     fontSize: 16,
+    fontFamily: theme.fonts.satoshi_regular,
   },
   currentUserText: {
     color: '#FFFFFF',
   },
   otherUserText: {
-    color: '#000000',
+    color: theme.colors.text_900,
   },
-  timeText: {
-    fontSize: 10,
-    color: '#888888',
-    marginTop: 4,
+  username: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: theme.colors.primary_600,
+    marginBottom: 4,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -358,35 +360,20 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: theme.colors.grey_300,
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 10,
     fontSize: 16,
+    fontFamily: theme.fonts.satoshi_regular,
     maxHeight: 100,
   },
   sendButton: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-  },
-  sendButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  addButton: {
-    marginTop: 10,
-    alignSelf: 'center',
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginLeft: 8,
   },
 });
 

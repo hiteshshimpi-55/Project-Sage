@@ -36,7 +36,7 @@ const ChatListing: React.FC = () => {
   const renderUser = ({ item }: { item: ChatListUser }) => (
     <TouchableOpacity
       style={styles.userItem}
-      onPress={() => { navigation.navigate('ChatScreen', { id: item.id!, type: item.type! }); }}
+      onPress={() => { navigation.navigate('ChatScreen', { id: item.id!, type: item.type!, name: item.name! }); }}
     >
       <Image
         source={{
@@ -57,6 +57,7 @@ const ChatListing: React.FC = () => {
         <TextInput
           style={styles.searchInput}
           placeholder="Search users..."
+          placeholderTextColor={theme.colors.grey_400}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />

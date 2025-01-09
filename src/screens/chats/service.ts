@@ -14,6 +14,11 @@ export interface ChatListUser {
     phone?: string;
 }
 
+export interface ChatUserMapping {
+    chatUserId: string;
+    username: string;
+}
+
 export interface Message {
     id: string;
     text: string;
@@ -53,6 +58,49 @@ export class ChatService {
             phone: user.phone || 'N/A',
         }));
     }
+
+    public static async getAllUsersFromSystemWithChatUserId(chat_id: string): Promise<Record<string, string>> {
+        try {
+            // Fetch all users from the authentication system
+            const { data: authData, error: authError } = await adminAuthClient.listUsers();
+            if (authError) {
+                console.error('Error fetching users from adminAuthClient:', authError);
+                return {};
+            }
+    
+            // Map authentication user data
+            const userData = authData.users.map((user: User) => ({
+                id: user.id,
+                name: user.user_metadata?.full_name || 'Unknown',
+                phone: user.phone || 'N/A',
+            }));
+    
+            // Fetch chat user mappings from the database
+            const { data: chatUserData, error: chatUserError } = await supabase
+                .from('chat_user')
+                .select('id, user_id')
+                .eq('chat_id', chat_id); // Filter by the given chat_id
+    
+            if (chatUserError) {
+                console.error('Error fetching chat_user data:', chatUserError);
+                return {};
+            }
+    
+            // Create a map { chatUserId: username }
+            const result: Record<string, string> = {};
+            chatUserData.forEach(chatUser => {
+                const user = userData.find(u => u.id === chatUser.user_id);
+                result[chatUser.id] = user?.name || 'Unknown';
+            });
+    
+            return result;
+        } catch (error) {
+            console.error('Unexpected error:', error);
+            return {};
+        }
+    }
+    
+    
 
     public static async getChatUserId(userId: string, chatId: string): Promise<string | null> {
         try {

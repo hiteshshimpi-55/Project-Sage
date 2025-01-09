@@ -26,6 +26,7 @@ export type RootStackParamList = {
   ChatScreen: {
     id: string;
     type: string;
+    name: string;
   };
   Home: undefined;
   MeetLink: undefined;
