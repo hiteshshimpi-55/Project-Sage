@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
-import Button from '../atoms/Button';
+import Button from '../atoms/Button/Button';
 
 interface UserCardProps {
   fullName: string;

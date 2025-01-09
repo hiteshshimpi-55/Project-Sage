@@ -65,10 +65,10 @@ function App(): React.JSX.Element {
         <SafeAreaView style={styles.safeArea}>
           <Stack.Navigator initialRouteName={isAuthenticated ? 'Home' : 'Login'}>
             {/* Auth and Other Screens */}
-            <Stack.Screen name="Signup" component={Signup} />
-            <Stack.Screen name="Login" component={Login} />
-            <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
-            <Stack.Screen name="ChatScreen" component={ChatScreen} />
+            <Stack.Screen name="Signup" component={Signup} options={{ headerShown: false }}/>
+            <Stack.Screen name="Login" component={Login} options={{ headerShown: false }}/>
+            <Stack.Screen name="AdminDashboard" component={AdminDashboard}/>
+            <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ headerShown: false }}/>
             <Stack.Screen name="MeetLink" component={AdminMeeting} />
 
             {/* Main App with Tabs */}

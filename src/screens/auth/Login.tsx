@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Alert, StyleSheet, Image } from 'react-native';
 import { login } from '../../core/auth';
-import Input from '../../components/atoms/Input';
-import Button from '../../components/atoms/Button';
+import {Input, Button} from '../../components/atoms'
 import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';

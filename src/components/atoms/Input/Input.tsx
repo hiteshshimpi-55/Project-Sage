@@ -40,9 +40,7 @@ const Input: React.FC<InputProps> = ({
   const validateInput = (text: string) => {
     switch (variant) {
       case 'phone':
-        // Remove any non-numeric characters
         const numericValue = text.replace(/[^0-9]/g, '');
-        // Limit to 10 digits
         return numericValue.slice(0, 10);
       case 'email':
         return text.toLowerCase();
@@ -83,6 +81,7 @@ const Input: React.FC<InputProps> = ({
           style={[styles.input, style]}
           placeholder={placeholder}
           value={value}
+          placeholderTextColor={theme.colors.grey_400}
           onChangeText={handleChangeText}
           keyboardType={getKeyboardType()}
           secureTextEntry={variant === 'password' && !showPassword}

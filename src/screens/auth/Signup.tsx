@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { signUp } from '../../core/auth';
 import supabase from '../../core/supabase';
-import Input from '../../components/atoms/Input';
-import Button from '../../components/atoms/Button';
+import {Input,Button}  from '../../components/atoms'
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';

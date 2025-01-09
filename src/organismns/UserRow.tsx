@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Button from '../components/atoms/Button';
+import Button from '../components/atoms/Button/Button';
 
 interface UserRowProps {
   name: string;
