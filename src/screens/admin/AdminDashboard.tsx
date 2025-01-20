@@ -104,20 +104,23 @@ const AdminDashboard: React.FC = () => {
         <Text style={styles.noDataText}>No users found.</Text>
       ) : (
         <ScrollView style={styles.scrollContainer}>
-          {users.map((user) => (
-            <UserCard
-              key={user.id}
-              fullName={user.full_name}
-              phone={user.phone}
-              age={user.age}
-              dob={user.dob}
-              gender={user.gender}
-              status={user.status}
-              onActivate={() => handleActivateUser(user.id)}
-              onMakeAdmin={() => handleMakeAdmin(user.id)}
-            />
-          ))}
-        </ScrollView>
+  {users.map((user) => (
+    <UserCard
+      key={user.id}
+      fullName={user.full_name}
+      phone={user.phone}
+      age={user.age}
+      dob={user.dob}
+      gender={user.gender}
+      status={user.status}
+      onActivate={
+        
+        user.status === 'active' ? undefined : () => handleActivateUser(user.id)
+      }
+      onMakeAdmin={() => handleMakeAdmin(user.id)}
+    />
+  ))}
+</ScrollView>
       )}
     </View>
   );

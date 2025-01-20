@@ -9,7 +9,7 @@ interface UserCardProps {
   dob: string;
   gender: string;
   status: string;
-  onActivate: () => void;
+  onActivate?: () => void; // Made optional
   onMakeAdmin: () => void;
 }
 
@@ -48,11 +48,16 @@ const UserCard: React.FC<UserCardProps> = ({
         <Text style={styles.details}>Status: {status}</Text>
       </View>
       <View style={styles.actions}>
-        <Button
-          title="Activate"
-          onPress={() => confirmAction('Activate User', onActivate)}
-          style={styles.activateButton}
-        />
+        {status === 'inactive' && onActivate && (
+          <Button
+            title="Activate"
+            onPress={() => confirmAction('Activate User', onActivate)}
+            style={styles.activateButton}
+          />
+        )}
+        {status === 'active' && (
+          <Text style={styles.activeText}>User is already active</Text>
+        )}
         <Button
           title="Make Admin"
           onPress={() => confirmAction('Make Admin', onMakeAdmin)}
@@ -119,5 +124,10 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 5,
+  },
+  activeText: {
+    color: 'green',
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
 });
