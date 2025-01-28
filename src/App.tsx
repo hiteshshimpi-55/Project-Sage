@@ -15,8 +15,13 @@ import Login from './screens/auth/Login';
 import ChatScreen from './screens/chats/Chat';
 import AdminDashboard from './screens/admin/AdminDashboard';
 import AdminMeeting from './screens/admin/AdminMeet';
-import { UserProvider } from './hooks/UserContext';
 import Home from './screens/home/Home';
+import UserSelectionScreen from './screens/channels/UserSelectionScreen';
+import ChannelDetailsScreen from './screens/channels/ChannelDetail';
+
+
+// 
+import { UserProvider } from './hooks/UserContext';
 import theme from '@utils/theme';
 
 export type RootStackParamList = {
@@ -30,6 +35,10 @@ export type RootStackParamList = {
   };
   Home: undefined;
   MeetLink: undefined;
+  UserSelectionScreen: undefined;
+  ChannelDetailsScreen: {
+    selectedUsers: string[];
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -70,6 +79,8 @@ function App(): React.JSX.Element {
             <Stack.Screen name="Login" component={Login} options={{ headerShown: false }}/>
             <Stack.Screen name="AdminDashboard" component={AdminDashboard}/>
             <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ headerShown: false }}/>
+            <Stack.Screen name="ChannelDetailsScreen" component={ChannelDetailsScreen} options={{ headerShown: false }}/>
+            <Stack.Screen name="UserSelectionScreen" component={UserSelectionScreen} options={{ headerShown: false }}/>
             <Stack.Screen name="MeetLink" component={AdminMeeting} />
 
             {/* Main App with Tabs */}

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Alert, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { signUp } from '../../core/auth';
 import supabase from '../../core/supabase';
-import {Input,Button}  from '../../components/atoms'
+import { Input, Button, Dropdown } from '../../components/atoms';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -19,22 +19,23 @@ const Signup: React.FC = () => {
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const insertIntoCustomUsers = async (userId: string) => {
+  const handleSignup = async () => {
     try {
-      const { error } = await supabase
-        .from('custom_users')
-        .insert([
-          {
-            id: userId,
-            full_name: fullName,
-            phone: phone,
-            role: 'user',
-            status: 'inactive',
-            gender: gender || null,
-            age: age ? parseInt(age, 10) : null,
-            dob: dob || null,
-          },
-        ]);
+      if (!fullName || !phone || !password || !gender || !age || !dob) {
+        Alert.alert('Error', 'Please fill all the required fields.');
+        return;
+      }
+
+      setLoading(true);
+      const { data, error } = await signUp({
+        phone,
+        password,
+        fullName,
+        gender: gender || undefined,
+        age: age ? parseInt(age, 10) : undefined,
+        dob: dob || undefined,
+      });
+      setLoading(false);
 
       if (error) {
         console.error('Error inserting into custom_users:', error);
@@ -42,110 +43,104 @@ const Signup: React.FC = () => {
       } else {
         Alert.alert('Success', 'User details saved successfully!');
         navigation.navigate('Home');
+
       }
     } catch (err) {
       console.error('Unexpected error:', err);
       Alert.alert('Error', 'Something went wrong.');
-    }
-  };
-
-  const handleSignup = async () => {
-    if (!fullName || !phone || !password) {
-      Alert.alert('Error', 'Please fill all the required fields.');
-      return;
-    }
-
-    setLoading(true);
-    const { data, error } = await signUp({
-      phone,
-      password,
-      fullName,
-      gender: gender || undefined,
-      age: age ? parseInt(age, 10) : undefined,
-      dob: dob || undefined,
-    });
-
-    if (error) {
-      console.error('Signup error:', error);
-      Alert.alert('Error', error.message || 'Failed to sign up.');
       setLoading(false);
-      return;
-    }
 
-    if (data?.user?.id) {
-      await insertIntoCustomUsers(data.user.id);
-    } else {
-      Alert.alert('Error', 'Failed to retrieve user ID.');
     }
-
-    setLoading(false);
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.welcomeText}>Create Account</Text>
-        <Text style={styles.subtitle}>Sign up to get started</Text>
-      </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.welcomeText}>Create Account</Text>
+          <Text style={styles.subtitle}>Sign up to get started</Text>
+        </View>
 
-      <View style={styles.formContainer}>
-        <Input
-          label="Full Name"
-          variant="text"
-          placeholder="Enter your full name"
-          value={fullName}
-          onChangeText={setFullName}
-        />
-        <Input
-          label="Phone Number"
-          variant="phone"
-          placeholder="Enter your phone number"
-          value={phone}
-          onChangeText={setPhone}
-        />
-        <Input
-          label="Password"
-          variant="password"
-          placeholder="Create a password"
-          value={password}
-          onChangeText={setPassword}
-        />
-        <Input
-          label="Gender"
-          variant="text"
-          placeholder="Enter your gender (optional)"
-          value={gender}
-          onChangeText={setGender}
-        />
-        <Input
-          label="Age"
-          variant="text"
-          placeholder="Enter your age (optional)"
-          value={age}
-          onChangeText={setAge}
-        />
-        <Input
-          label="Date of Birth"
-          variant="text"
-          placeholder="YYYY-MM-DD (optional)"
-          value={dob}
-          onChangeText={setDob}
-        />
+        <View style={styles.formContainer}>
+          <Input
+            label="Full Name"
+            variant="text"
+            placeholder="Enter your full name"
+            value={fullName}
+            onChangeText={setFullName}
+          />
+          <Input
+            label="Phone Number"
+            variant="phone"
+            placeholder="Enter your phone number"
+            value={phone}
+            onChangeText={setPhone}
+          />
+          <Input
+            label="Password"
+            variant="password"
+            placeholder="Create a password"
+            value={password}
+            onChangeText={setPassword}
+          />
+          {/* Gender Dropdown */}
+          <Dropdown
+            label="Gender"
+            options={[
+              { label: 'Male', value: 'Male' },
+              { label: 'Female', value: 'Female' },
+            ]}
+            placeholder="Select your gender (optional)"
+            selectedValue={gender}
+            onValueChange={setGender}
+          />
+          {/* Age Input as number */}
+          <Input
+            label="Age"
+            variant='number'
+            placeholder="Enter your age (optional)"
+            value={age}
+            onChangeText={setAge}
+          />
+          {/* Date of Birth */}
+          <Input
+            label="Date of Birth"
+            variant="number"
+            placeholder="DD/MM/YY"
+            value={dob}
+            onChangeText={(text) => {
+              // Remove any non-numeric characters
+              let formattedText = text.replace(/[^0-9]/g, '');
+              // Automatically insert slashes as needed
+              if (formattedText.length > 2) {
+                formattedText = `${formattedText.slice(0, 2)}/${formattedText.slice(2)}`;
+              }
+              if (formattedText.length > 5) {
+                formattedText = `${formattedText.slice(0, 5)}/${formattedText.slice(5, 7)}`;
+              }
+              // Limit to DD/MM/YY format
+              if (formattedText.length > 8) {
+                formattedText = formattedText.slice(0, 8);
+              }
+              setDob(formattedText);
+            }}
+          />
 
-        <Button 
-          title="Create Account" 
-          onPress={handleSignup} 
-          loading={loading}
-          disabled={!fullName || !phone || !password}
-        />
-      </View>
+          <Button
+            title="Create Account"
+            onPress={handleSignup}
+            loading={loading}
+            disabled={!fullName || !phone || !password}
+          />
+        </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account?</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.loginText}>Log in</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Already have an account?</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.loginText}>Log in</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -156,6 +151,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9f9f9',
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 20,
   },
   header: {
@@ -183,8 +181,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 'auto',
-    paddingVertical: 20,
+    marginTop: 4,
   },
   footerText: {
     color: theme.colors.text_600,

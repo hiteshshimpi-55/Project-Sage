@@ -1,5 +1,5 @@
 import { User } from "@supabase/supabase-js";
-import supabase, { adminAuthClient } from "../../core/supabase";
+import supabase, { adminAuthClient } from "../core/supabase";
 
 
 interface ChatsCheckResponse {
@@ -129,6 +129,7 @@ export class ChatService {
                 chat_id: chatId,
                 user_id: userId,
             };
+            console.log("Payload",payload)
     
             const { data, error } = await supabase
                 .from('chat_user')
@@ -262,6 +263,28 @@ export class ChatService {
             return [];
         }
     }
+
+    static async createGroupWithUsers(createdBy: string, groupName: string, userIds: string[]): Promise<string> {
+        try {
+          const { data, error } = await supabase.rpc('create_group_with_users', {
+            created_by: createdBy,
+            group_name: groupName,
+            user_ids: userIds,
+          });
+    
+          if (error) {
+            console.error('Error creating group with users:', error);
+            throw new Error(error.message);
+          }
+    
+          // Return the chat_id
+          return data;
+        } catch (error) {
+          console.error('Unexpected error creating group:', error);
+          throw error;
+        }
+      }
+    
     
 
 }
