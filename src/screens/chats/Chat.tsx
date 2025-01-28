@@ -14,7 +14,7 @@ import {
   Image,
 } from 'react-native';
 import supabase from '../../core/supabase';
-import { ChatService, Message } from './service';
+import { ChatService, Message } from '../../utils/chat_service';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from 'src/App';
 import theme from '@utils/theme';

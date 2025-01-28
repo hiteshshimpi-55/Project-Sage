@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import ChatListing from "../chats/ChatListing";
 import CalendarScreen from "../calendar/CalendarScreen";
 import ProfileScreen from "../profile/ProfileScreen";
-import ChannelListing from "../chats/ChannelListing";
+import ChannelListing from "../channels/ChannelListingScreen";
 import BottomBar from "../../components/molecules/BottomBar";
 import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { Bell, LinkSimpleHorizontal } from "phosphor-react-native";

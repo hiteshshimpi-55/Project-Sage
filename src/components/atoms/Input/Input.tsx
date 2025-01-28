@@ -2,7 +2,7 @@ import theme from '@utils/theme';
 import React, { useState } from 'react';
 import { TextInput, StyleSheet, KeyboardTypeOptions, StyleProp, TextStyle, Text, View, TouchableOpacity } from 'react-native';
 import { Envelope, Eye, EyeSlash, Phone } from 'phosphor-react-native';
-type InputVariant = 'text' | 'email' | 'password' | 'phone';
+type InputVariant = 'text' | 'email' | 'password' | 'phone' | 'number';
 
 interface InputProps {
   label: string;
@@ -32,6 +32,8 @@ const Input: React.FC<InputProps> = ({
         return 'email-address';
       case 'phone':
         return 'phone-pad';
+      case 'number':
+        return 'numeric';
       default:
         return 'default';
     }

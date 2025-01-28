@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, TextInput, Modal } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { ChatListUser, ChatService } from '../../utils/chat_service';
 import { RootStackParamList } from '../../App';
 import theme from '@utils/theme';
+import { Plus } from 'phosphor-react-native';
 
-const ChatListing: React.FC = () => {
+const ChannelListing: React.FC = () => {
   const [users, setUsers] = useState<ChatListUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentUserId, setCurrentUserId] = useState<string>('');
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   useEffect(() => {
@@ -18,17 +18,16 @@ const ChatListing: React.FC = () => {
   const loadUsers = async () => {
     try {
       const currentUserId = await ChatService.getCurrentUserId();
-      setCurrentUserId(currentUserId!);
       if (currentUserId) {
-        const fetchedUsers = await ChatService.getAllUsers(currentUserId);
-        setUsers(fetchedUsers);
+        const groups = await ChatService.getGroups(currentUserId);
+        setUsers(groups);
       }
     } catch (error) {
       console.error('Error loading users:', error);
     }
   };
 
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = users.filter((user) => {
     const fullName = user.name!.toLowerCase();
     return fullName.includes(searchQuery.toLowerCase());
   });
@@ -36,18 +35,11 @@ const ChatListing: React.FC = () => {
   const renderUser = ({ item }: { item: ChatListUser }) => (
     <TouchableOpacity
       style={styles.userItem}
-      onPress={() => { navigation.navigate('ChatScreen', { id: item.id!, type: item.type!, name: item.name! }); }}
+      onPress={() =>
+        navigation.navigate('ChatScreen', { id: item.id!, type: item.type!, name: item.name! })
+      }
     >
-      <Image
-        source={{
-          uri: 'https://picsum.photos/200/300', // Dummy profile picture URL
-        }}
-        style={styles.profilePic}
-      />
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{item.name!}</Text>
-        {item.phone && <Text>{`+${item.phone}`}</Text>}
-      </View>
+      <Text style={styles.userName}>{item.name!}</Text>
     </TouchableOpacity>
   );
 
@@ -56,8 +48,7 @@ const ChatListing: React.FC = () => {
       <View style={styles.header}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search users..."
-          placeholderTextColor={theme.colors.grey_400}
+          placeholder="Search channels..."
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -69,9 +60,18 @@ const ChatListing: React.FC = () => {
         keyExtractor={(item) => item.id!}
         contentContainerStyle={styles.listContainer}
       />
+
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => navigation.navigate('UserSelectionScreen')}
+      >
+        <Plus size={24} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 };
+
+export default ChannelListing;
 
 const styles = StyleSheet.create({
   container: {
@@ -86,37 +86,32 @@ const styles = StyleSheet.create({
   searchInput: {
     height: 40,
     fontSize: 16,
-    fontFamily: theme.fonts.satoshi_regular,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 12,
-    marginBottom: 10,
   },
   listContainer: {
     padding: 16,
   },
   userItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  profilePic: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 16,
-  },
-  userInfo: {
-    flex: 1,
-  },
   userName: {
     fontSize: 16,
-    fontFamily: theme.fonts.satoshi_bold,
-    fontWeight: 'bold',
-  }
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: theme.colors.primary_600,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+  },
 });
-
-export default ChatListing;
