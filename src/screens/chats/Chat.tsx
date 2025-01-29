@@ -40,65 +40,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
 
   const initialize = useCallback(async () => {
     try {
-      const _currentUserId = await ChatService.getCurrentUserId();
-      if (!_currentUserId) {
-        throw new Error('Unable to fetch current user ID.');
-      }
-      setCurrentUserId(_currentUserId);
-
-      if (route.params.type === 'one-to-one') {
-        const existingChat = await ChatService.checkIfChatExists(
-          _currentUserId,
-          route.params.id
-        );
-
-        if (existingChat?.chat_id) {
-          const chatUserId = await ChatService.getChatUserId(
-            _currentUserId,
-            existingChat.chat_id
-          );
-          if (chatUserId) {
-            setCurrentChatId(existingChat.chat_id);
-            setCurrentChatUserId(chatUserId);
-            setChatUserName(route.params.name); // Set the user's name for the app bar
-          } else {
-            const newChatUserId = await ChatService.createChatUser(
-              _currentUserId,
-              existingChat.chat_id
-            );
-            setCurrentChatId(existingChat.chat_id);
-            setCurrentChatUserId(newChatUserId);
-            setChatUserName(route.params.name); // Set the user's name for the app bar
-          }
-        } else {
-          const newChatId = await ChatService.createOneToOneChat(
-            route.params.id,
-            _currentUserId
-          );
-
-          if (newChatId) {
-            const newChatUserId = await ChatService.createChatUser(
-              _currentUserId,
-              newChatId
-            );
-
-            setCurrentChatId(newChatId);
-            setCurrentChatUserId(newChatUserId);
-            setChatUserName(route.params.name); // Set the user's name for the app bar
-          } else {
-            throw new Error('Failed to create a new chat.');
-          }
-        }
-      } else {
-        const chatUserId = await ChatService.getChatUserId(
-          _currentUserId,
-          route.params.id
-        );
-        setCurrentChatId(route.params.id);
-        setCurrentChatUserId(chatUserId);
-        setChatUserName(route.params.name); // Set the group name for the app bar
-      }
-
+      const currentUserId = await ChatService.getCurrentUserId();
+      if (!currentUserId) return;
+      const chatDetails = await ChatService.getChatDetails(currentUserId, route.params.id, route.params.type);
+      if (!chatDetails) return;
+      const { chatId, chatUserId } = chatDetails;
+      if (!chatId || !chatUserId) return;
+      setCurrentChatId(chatId);
+      setCurrentChatUserId(chatUserId);
+      setCurrentUserId(currentUserId);
+      setChatUserName(route.params.name);
     } catch (error) {
       console.error('Error initializing chat:', error);
     }

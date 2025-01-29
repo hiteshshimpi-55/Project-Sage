@@ -17,7 +17,7 @@ interface SignUpOptions {
 export const signUp = async ({ phone, password, fullName, gender, age, dob }: SignUpOptions): Promise<AuthResponse> => {
   try {
     const { data, error } = await supabase.auth.signUp({
-      phone: `+${phone}`,
+      phone: `+91${phone}`,
       password,
       options: {
         data: {

@@ -12,6 +12,9 @@ export interface ChatListUser {
     type?: string;
     name?: string;
     phone?: string;
+    latest_message?: string;
+    latest_message_time?: string;
+    unread_count?: number;
 }
 
 export interface ChatUserMapping {
@@ -250,13 +253,28 @@ export class ChatService {
     
             console.log('Fetched groups:', chatData);
 
-            const final_data = chatData.map((chat: any) => {
-                return {
-                    id: chat.id,
-                    name: chat.name,
-                    type:'one-to-many',
-                }
-            })
+            // const final_data = chatData.map((chat: any) => {
+            //     return {
+            //         id: chat.id,
+            //         name: chat.name,
+            //         type:'one-to-many',
+            //     }
+            // })
+            const final_data = await Promise.all(
+                chatData.map(async (chat) => {
+                  const latestMessage = await this.getLastMessageOfChat(chat.id);
+                  const unreadCount = await this.getUnreadMessagesCount(chat.id, currentUserId);
+                  
+                  return {
+                    ...chat,
+                    latest_message: latestMessage?.text || '',
+                    latest_message_time: latestMessage?.created_at || '',
+                    unread_count: unreadCount || 0,
+                  };
+                })
+              );
+
+            console.log("Final Data",final_data)
             return final_data || [];
         } catch (error) {
             console.error("Unexpected error in getGroups:", error);
@@ -285,6 +303,108 @@ export class ChatService {
         }
       }
     
+      static async markAsRead(chatId: string, userId: string) {
+        try {
+          const now = new Date().toISOString();
+          await supabase.from('chat_user').update({ last_read_at: now }).eq('chat_id', chatId).eq('user_id', userId);
+        } catch (error) {
+          console.error("Error marking chat as read:", error);
+        }
+      }
+      
+      static async getChatDetails(currentUserId: string, targetUserId: string, chatType: string): Promise<{ chatId: string | null; chatUserId: string | null; } | null> {
+        try {
+          let chatId: string | null = null;
+          let chatUserId: string | null = null;
+      
+          if (chatType === 'one-to-one') {
+            const existingChat = await ChatService.checkIfChatExists(currentUserId, targetUserId);
+      
+            if (existingChat?.chat_id) {
+              chatId = existingChat.chat_id;
+              chatUserId = await ChatService.getChatUserId(currentUserId, chatId) 
+                            ?? await ChatService.createChatUser(currentUserId, chatId);
+            } else {
+              chatId = await ChatService.createOneToOneChat(targetUserId, currentUserId);
+              if (chatId) {
+                chatUserId = await ChatService.createChatUser(currentUserId, chatId);
+              }
+            }
+          } else {
+            chatId = targetUserId; // In group chat, chatId is already provided
+            chatUserId = await ChatService.getChatUserId(currentUserId, chatId);
+          }
+      
+          if (!chatId || !chatUserId) throw new Error("Failed to initialize chat.");
+
+          await this.markAsRead(chatId, currentUserId)
+          return { chatId, chatUserId };
+        } catch (error) {
+          console.error('Error getting chat details:', error);
+          return null;
+        }
+      };
+
+      static async getLastMessageOfChat(chatId: string): Promise<Message | null> {
+        try {
+          const { data, error } = await supabase
+            .from('message')
+            .select('*')
+            .eq('chat_id', chatId)
+            .order('created_at', { ascending: false })
+            .limit(1);
     
+          if (error) {
+            console.error('Error fetching last message:', error);
+            return null;
+          }
+    
+          return data?.[0] || null;
+        } catch (error) {
+          console.error('Unexpected error fetching last message:', error);
+          return null;
+        }
+      }
+
+      static async getChatUserLastReadTime(chatId: string, userId: string): Promise<string | null> {
+        try {
+          const { data, error } = await supabase
+            .from('chat_user')
+            .select('last_read_at')
+            .eq('chat_id', chatId)
+            .eq('user_id', userId)
+            .single();
+    
+          if (error) {
+            console.error('Error fetching last read time:', error);
+            return null;
+          }
+    
+          return data?.last_read_at || null;
+        } catch (error) {
+          console.error('Unexpected error fetching last read time:', error);
+          return null;
+        }
+      }
+
+      static async getUnreadMessagesCount(chatId: string, userId: string): Promise<number> {
+        try {
+          const { data, error } = await supabase
+            .from('message')
+            .select('count', { count: 'exact' })
+            .eq('chat_id', chatId)
+            .gt('created_at', (await this.getChatUserLastReadTime(chatId, userId)) || '1970-01-01T00:00:00Z');
+
+          if (error) {
+            console.error('Error fetching unread messages count:', error);
+            return 0;
+          }
+
+          return data[0]?.count || 0;
+        } catch (error) {
+          console.error('Unexpected error fetching unread messages count:', error);
+          return 0;
+        }
+      }
 
 }
