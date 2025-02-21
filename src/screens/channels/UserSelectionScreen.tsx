@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, FlatList, Text, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { ChatListUser, ChatService } from '../../utils/chat_service';
 import { RootStackParamList } from '../../App';
@@ -16,8 +16,11 @@ const UserSelectionScreen: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      const userList = await ChatService.getAllUsers(''); // Fetch all users
-      setUsers(userList);
+      const userList = await ChatService.getAllUsers('')
+      const currentUserId = await ChatService.getCurrentUserId();
+      // Filter out the signed-in user
+      const filteredUsers = userList.filter((user) => user.id !== currentUserId);
+      setUsers(filteredUsers);
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -32,6 +35,10 @@ const UserSelectionScreen: React.FC = () => {
   };
 
   const handleContinue = () => {
+    if (selectedUsers.length === 0) {
+      Alert.alert('Please select at least one user');
+      return;
+    }
     navigation.navigate('ChannelDetailsScreen', { selectedUsers });
   };
 
@@ -40,7 +47,14 @@ const UserSelectionScreen: React.FC = () => {
       style={styles.userItem}
       onPress={() => toggleUserSelection(item.id!)}
     >
-      <Text style={styles.userName}>{item.name}</Text>
+      <Image
+        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name??"")}&background=random` }}
+        style={styles.userImage}
+      />
+      <View style={styles.userInfo}>
+        <Text style={styles.userName}>{item.name!}</Text>
+        {item.phone && <Text>{`+${item.phone}`}</Text>}
+      </View>
       {selectedUsers.includes(item.id!) && <Text style={styles.selectedText}>✓</Text>}
     </TouchableOpacity>
   );
@@ -71,12 +85,24 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   userItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
+  userImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 16,
+  },
   userName: {
     fontSize: 16,
+    flex: 1,
+  },
+  userInfo: {
+    flex: 1,
   },
   selectedText: {
     color: theme.colors.primary_600,

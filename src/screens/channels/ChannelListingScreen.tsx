@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Image } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Image, ActivityIndicator, Alert } from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { ChatListUser, ChatService } from '../../utils/chat_service';
 import { RootStackParamList } from '../../App';
@@ -14,21 +15,31 @@ const formatTime = (timestamp: string) => {
 const ChannelListing: React.FC = () => {
   const [users, setUsers] = useState<ChatListUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     loadUsers();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadUsers();
+    }, [])
+  );
+
   const loadUsers = async () => {
+    setIsLoading(true);
     try {
       const currentUserId = await ChatService.getCurrentUserId();
       if (currentUserId) {
         const groups = await ChatService.getGroups(currentUserId);
         setUsers(groups);
       }
-    } catch (error) {
-      console.error('Error loading users:', error);
+    } catch (error:any) {
+      Alert.alert(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -45,17 +56,17 @@ const ChannelListing: React.FC = () => {
       }}
     >
       <Image
-        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name??"")}&background=random` }}
+        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name ?? "")}&background=random` }}
         style={styles.channelImage}
       />
-  
+
       <View style={styles.textContainer}>
         <Text style={styles.userName}>{item.name}</Text>
         <Text style={styles.latestMessage} numberOfLines={1}>
           {item.latest_message || 'No messages yet'}
         </Text>
       </View>
-  
+
       <View style={styles.metaContainer}>
         <Text style={styles.messageTime}>
           {item.latest_message_time ? formatTime(item.latest_message_time) : ''}
@@ -68,7 +79,6 @@ const ChannelListing: React.FC = () => {
       </View>
     </TouchableOpacity>
   );
-  
 
   return (
     <View style={styles.container}>
@@ -81,16 +91,27 @@ const ChannelListing: React.FC = () => {
         />
       </View>
 
-      <FlatList
-        data={filteredUsers}
-        renderItem={renderUser}
-        keyExtractor={(item) => item.id!}
-        contentContainerStyle={styles.listContainer}
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary_600} />
+        </View>
+      ) : filteredUsers.length > 0 ? (
+        <FlatList
+          data={filteredUsers}
+          renderItem={renderUser}
+          keyExtractor={(item) => item.id!}
+          contentContainerStyle={styles.listContainer}
+        />
+      ) : (
+        <View style={styles.noUsersContainer}>
+          <Text style={styles.noUsersText}>No channels found</Text>
+        </View>
+      )}
 
       <TouchableOpacity
-        style={styles.floatingButton}
+        style={[styles.floatingButton, isLoading && styles.disabledButton]}
         onPress={() => navigation.navigate('UserSelectionScreen')}
+        disabled={isLoading}
       >
         <Plus size={24} color="#fff" />
       </TouchableOpacity>
@@ -151,6 +172,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 5,
   },
+  disabledButton: {
+    backgroundColor: '#ccc',
+  },
   latestMessage: {
     fontSize: 14,
     color: '#666',
@@ -179,5 +203,19 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noUsersContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noUsersText: {
+    fontSize: 16,
+    color: '#888',
   },
 });

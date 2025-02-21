@@ -12,14 +12,16 @@ import {
   Keyboard,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import supabase from '../../core/supabase';
 import { ChatService, Message } from '../../utils/chat_service';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from 'src/App';
 import theme from '@utils/theme';
-import { PaperPlaneTilt, CaretLeft } from 'phosphor-react-native';
+import { PaperPlaneTilt, CaretLeft, Image as ImageIcon } from 'phosphor-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 // Types
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
@@ -37,6 +39,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [usernames, setUsernames] = useState<{ [key: string]: string }>({});
   const [chatUserName, setChatUserName] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false); // Loader state
 
   const initialize = useCallback(async () => {
     try {
@@ -135,6 +138,27 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     }
   };
 
+  const handleSendImage = async (imageUri: string) => {
+    if (!currentChatId || !currentUserId) return;
+    setIsLoading(true);
+    const response = await ChatService.sendImageMessage(currentChatId, currentUserId, imageUri);
+    setIsLoading(false);
+  };
+
+  const handleImagePicker = async () => {
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      quality: 0.8,
+    });
+
+    if (result.assets && result.assets.length > 0) {
+      const imageUri = result.assets[0].uri;
+      if (imageUri) {
+        await handleSendImage(imageUri);
+      }
+    }
+  };
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isCurrentUser = item.created_by === currentChatUserId;
 
@@ -148,14 +172,18 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
         {route.params.type === 'one-to-many' && !isCurrentUser && usernames[item.created_by] && (
           <Text style={styles.username}>{usernames[item.created_by]}</Text>
         )}
-        <Text
-          style={[
-            styles.messageText,
-            isCurrentUser ? styles.currentUserText : styles.otherUserText,
-          ]}
-        >
-          {item.text}
-        </Text>
+        {item.type === 'image' ? (
+          <Image source={{ uri: item.media_url }} style={styles.imageMessage} />
+        ) : (
+          <Text
+            style={[
+              styles.messageText,
+              isCurrentUser ? styles.currentUserText : styles.otherUserText,
+            ]}
+          >
+            {item.text}
+          </Text>
+        )}
         <Text style={isCurrentUser ? styles.currentUserTimeText : styles.otherUserTimeText}>
           {new Date(item.created_at).toLocaleTimeString([], {
             hour: '2-digit',
@@ -199,6 +227,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           contentContainerStyle={styles.messageList}
         />
         <View style={styles.inputContainer}>
+          <TouchableOpacity onPress={handleImagePicker} style={styles.imageButton}>
+            <ImageIcon size={24} color={theme.colors.primary_600} />
+          </TouchableOpacity>
           <TextInput
             style={styles.input}
             value={inputText}
@@ -209,13 +240,18 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
             onSubmitEditing={handleSend}
           />
           <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <PaperPlaneTilt weight='fill' size={32} color={theme.colors.primary_600}  />
+            <PaperPlaneTilt weight="fill" size={32} color={theme.colors.primary_600} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      {isLoading && (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary_600} />
+        </View>
+      )}
     </SafeAreaView>
   );
-}; 
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -325,6 +361,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginLeft: 8,
+  },
+  imageButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+  },
+  imageMessage: {
+    width: 200,
+    height: 200,
+    borderRadius: 10,
+  },
+  loaderContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
 });
 

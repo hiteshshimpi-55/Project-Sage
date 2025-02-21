@@ -79,8 +79,8 @@ function App(): React.JSX.Element {
             <Stack.Screen name="Login" component={Login} options={{ headerShown: false }}/>
             <Stack.Screen name="AdminDashboard" component={AdminDashboard}/>
             <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ headerShown: false }}/>
-            <Stack.Screen name="ChannelDetailsScreen" component={ChannelDetailsScreen} options={{ headerShown: false }}/>
-            <Stack.Screen name="UserSelectionScreen" component={UserSelectionScreen} options={{ headerShown: false }}/>
+            <Stack.Screen name="ChannelDetailsScreen" component={ChannelDetailsScreen} options={{ headerShown: true }}/>
+            <Stack.Screen name="UserSelectionScreen" component={UserSelectionScreen} options={{ headerShown: true }}/>
             <Stack.Screen name="MeetLink" component={AdminMeeting} />
 
             {/* Main App with Tabs */}

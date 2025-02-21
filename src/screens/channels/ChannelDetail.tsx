@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { NavigationProp, useNavigation, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import { ChatService } from '../../utils/chat_service';
@@ -21,13 +21,15 @@ const ChannelDetailsScreen: React.FC<Props> = ({ route }) => {
       try {
         const chatId = await ChatService.createGroupWithUsers(currentUser, groupName, selectedUsers);
         if (!chatId){
-          console.error('Error creating group with users:');
+          Alert.alert('Error creating group with users');
         }
         navigation.goBack();
         navigation.goBack();
-      } catch (error) {
-        console.error('Error creating group:', error);
+      } catch (error:any) {
+        Alert.alert('Error creating group', error || 'An error occurred');
       }
+    }else{
+      Alert.alert('Group name should not be empty');
     }
   };
 
