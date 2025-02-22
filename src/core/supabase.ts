@@ -12,7 +12,7 @@ const supabase = createClient(url, key, {
   auth: {
     storage: AsyncStorage,
     persistSession: true,
-    detectSessionInUrl: false, // Required for React Native
+    detectSessionInUrl: false
   },
 });
 

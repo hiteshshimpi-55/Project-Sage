@@ -118,31 +118,28 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
 
   const handleSend = async () => {
     if (!inputText.trim() || !currentChatId || !currentUserId) return;
-
-    try {
-      const { error } = await supabase.from('message').insert({
-        text: inputText.trim(),
-        chat_id: currentChatId,
-        created_by: currentChatUserId,
-        type: 'text',
-        media_url: '',
-      });
-
-      if (error) {
-        console.error('Error sending message:', error);
-      } else {
-        setInputText('');
-      }
-    } catch (error) {
+    await ChatService.sendTextMessage(currentChatId, currentChatUserId!, inputText.trim())
+    .then(() => {
+      setInputText('')
+    })
+    .catch((error) => {
       console.error('Error sending message:', error);
-    }
+      Alert.alert('Error', error.message);
+    });
   };
 
   const handleSendImage = async (imageUri: string) => {
-    if (!currentChatId || !currentUserId) return;
-    setIsLoading(true);
-    const response = await ChatService.sendImageMessage(currentChatId, currentUserId, imageUri);
-    setIsLoading(false);
+    if (!currentChatId || !currentChatUserId || !currentUserId) return;
+    setIsLoading(true)
+    await ChatService.sendImageMessage(currentChatId, currentChatUserId, imageUri)
+    .then(() => {
+      setIsLoading(false)
+    })
+    .catch((error) => {
+      setIsLoading(false)
+      console.error('Error sending image:', error);
+      Alert.alert('Error', error.message);
+    });
   };
 
   const handleImagePicker = async () => {
@@ -161,7 +158,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isCurrentUser = item.created_by === currentChatUserId;
-
     return (
       <View
         style={[

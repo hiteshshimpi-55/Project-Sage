@@ -404,62 +404,87 @@ export class ChatService {
     }
   }
 
-  static async sendImageMessage(chatId: string, userId: string, imageSystemPath: string) {
+
+static async sendImageMessage(chatId: string, userId: string, imageSystemPath: string) {
     try {
-      // Step 1: Prepare file information
-      const fileExt = imageSystemPath.split('.').pop(); // Get file extension
-      const fileName = `${userId}-${Date.now()}.${fileExt}`; // Create a unique file name
-      const filePath = `chat-images/${fileName}`; // Path in Supabase Storage
+        // Step 1: Prepare file information
+        const fileExt = imageSystemPath.split('.').pop(); 
+        const fileName = `${userId}-${Date.now()}.${fileExt}`; 
+        const filePath = `chat-images/${fileName}`; 
 
-      // Read the image file as a base64 string
-      const base64File = await RNFS.readFile(imageSystemPath, 'base64');
+        // Read the image file as a base64 string
+        const base64File = await RNFS.readFile(imageSystemPath, 'base64');
 
-      console.log('Base64 File Size:', base64File.length);
+        console.log('Base64 File Size:', base64File.length);
 
-      // Create a Blob using base64 data (Supabase accepts base64 directly)
-      const base64Blob = `data:image/${fileExt};base64,${base64File}`;
+        // Convert base64 to binary data (Uint8Array)
+        const binaryString = atob(base64File);
+        const byteArray = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            byteArray[i] = binaryString.charCodeAt(i);
+        }
 
-      // Upload the base64 file to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('chat-images')
-        .upload(filePath, base64Blob, {
-          contentType: `image/${fileExt}`,
-          upsert: true, // Overwrite if file already exists (optional)
-        });
+        // Upload the binary data to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('chat-images')
+            .upload(filePath, byteArray, {
+                contentType: `image/${fileExt}`
+            });
 
-      if (uploadError) {
-        throw new Error(`Failed to upload image: ${uploadError.message}`);
-      }
+        if (uploadError) {
+            throw new Error(`Failed to upload image: ${uploadError.message}`);
+        }
 
-      // Step 2: Get the public URL of the uploaded image
-      const { data: publicUrlData } = supabase.storage
-        .from('chat-images')
-        .getPublicUrl(filePath);
+        // Step 2: Get the public URL of the uploaded image
+        const { data: publicUrlData } = supabase.storage
+            .from('chat-images')
+            .getPublicUrl(filePath);
 
-      const imageUrl = publicUrlData.publicUrl;
+        const imageUrl = publicUrlData.publicUrl;
 
-      // Step 3: Send the image URL as a message
+        // Step 3: Send the image URL as a message
+        const message = {
+            chat_id: chatId,
+            created_by: userId,
+            text: '',
+            type: 'image',
+            media_url: imageUrl,
+        };
+
+        // Insert the message into your messages table
+        const { data: messageData, error: messageError } = await supabase
+            .from('message')
+            .insert(message);
+
+        if (messageError) {
+            throw new Error(`Failed to send message: ${messageError.message}`);
+        }
+
+        console.log('Image message sent successfully:', messageData);
+        return messageData;
+    } catch (error) {
+        console.error('Error sending image message:', error);
+        throw error;
+    }
+}
+
+  static async sendTextMessage(chatId: string, userId: string, text: string) {
+    try {
       const message = {
         chat_id: chatId,
-        user_id: userId,
-        message_type: 'image',
-        content: imageUrl, // Use the public URL of the image
-        timestamp: new Date().toISOString(),
+        created_by: userId,
+        type: 'text',
+        text: text,
+        media_url: '',
       };
 
-      // Insert the message into your messages table
-      const { data: messageData, error: messageError } = await supabase
-        .from('messages')
-        .insert([message]);
-
-      if (messageError) {
-        throw new Error(`Failed to send message: ${messageError.message}`);
+      const { data, error } = await supabase.from('message').insert(message);
+      if (error) {
+        throw new Error(`Failed to send message: ${error.message}`);
       }
-
-      console.log('Image message sent successfully:', messageData);
-      return messageData;
+      return data;
     } catch (error) {
-      console.error('Error sending image message:', error);
+      console.error('Error sending text message:', error);
       throw error;
     }
   }
