@@ -405,68 +405,68 @@ export class ChatService {
   }
 
 
-static async sendImageMessage(chatId: string, userId: string, imageSystemPath: string) {
+  static async sendImageMessage(chatId: string, userId: string, imageSystemPath: string) {
     try {
-        // Step 1: Prepare file information
-        const fileExt = imageSystemPath.split('.').pop(); 
-        const fileName = `${userId}-${Date.now()}.${fileExt}`; 
-        const filePath = `chat-images/${fileName}`; 
+      // Step 1: Prepare file information
+      const fileExt = imageSystemPath.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const filePath = `chat-images/${fileName}`;
 
-        // Read the image file as a base64 string
-        const base64File = await RNFS.readFile(imageSystemPath, 'base64');
+      // Read the image file as a base64 string
+      const base64File = await RNFS.readFile(imageSystemPath, 'base64');
 
-        console.log('Base64 File Size:', base64File.length);
+      console.log('Base64 File Size:', base64File.length);
 
-        // Convert base64 to binary data (Uint8Array)
-        const binaryString = atob(base64File);
-        const byteArray = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            byteArray[i] = binaryString.charCodeAt(i);
-        }
+      // Convert base64 to binary data (Uint8Array)
+      const binaryString = atob(base64File);
+      const byteArray = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        byteArray[i] = binaryString.charCodeAt(i);
+      }
 
-        // Upload the binary data to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('chat-images')
-            .upload(filePath, byteArray, {
-                contentType: `image/${fileExt}`
-            });
+      // Upload the binary data to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('chat-images')
+        .upload(filePath, byteArray, {
+          contentType: `image/${fileExt}`
+        });
 
-        if (uploadError) {
-            throw new Error(`Failed to upload image: ${uploadError.message}`);
-        }
+      if (uploadError) {
+        throw new Error(`Failed to upload image: ${uploadError.message}`);
+      }
 
-        // Step 2: Get the public URL of the uploaded image
-        const { data: publicUrlData } = supabase.storage
-            .from('chat-images')
-            .getPublicUrl(filePath);
+      // Step 2: Get the public URL of the uploaded image
+      const { data: publicUrlData } = supabase.storage
+        .from('chat-images')
+        .getPublicUrl(filePath);
 
-        const imageUrl = publicUrlData.publicUrl;
+      const imageUrl = publicUrlData.publicUrl;
 
-        // Step 3: Send the image URL as a message
-        const message = {
-            chat_id: chatId,
-            created_by: userId,
-            text: '',
-            type: 'image',
-            media_url: imageUrl,
-        };
+      // Step 3: Send the image URL as a message
+      const message = {
+        chat_id: chatId,
+        created_by: userId,
+        text: '',
+        type: 'image',
+        media_url: imageUrl,
+      };
 
-        // Insert the message into your messages table
-        const { data: messageData, error: messageError } = await supabase
-            .from('message')
-            .insert(message);
+      // Insert the message into your messages table
+      const { data: messageData, error: messageError } = await supabase
+        .from('message')
+        .insert(message);
 
-        if (messageError) {
-            throw new Error(`Failed to send message: ${messageError.message}`);
-        }
+      if (messageError) {
+        throw new Error(`Failed to send message: ${messageError.message}`);
+      }
 
-        console.log('Image message sent successfully:', messageData);
-        return messageData;
+      console.log('Image message sent successfully:', messageData);
+      return messageData;
     } catch (error) {
-        console.error('Error sending image message:', error);
-        throw error;
+      console.error('Error sending image message:', error);
+      throw error;
     }
-}
+  }
 
   static async sendTextMessage(chatId: string, userId: string, text: string) {
     try {
@@ -485,6 +485,57 @@ static async sendImageMessage(chatId: string, userId: string, imageSystemPath: s
       return data;
     } catch (error) {
       console.error('Error sending text message:', error);
+      throw error;
+    }
+  }
+
+  static async sendAudioMessage(chatId: string, userId: string, audioPath: string) {
+    try {
+      // Step 1: Prepare file information
+      const fileExt = audioPath.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `voice_messages/${fileName}`;
+
+      // Step 2: Upload the audio to Supabase Storage
+      const audioData = await RNFS.readFile(audioPath, 'base64');
+
+      const binaryString = atob(audioData);
+      const byteArray = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        byteArray[i] = binaryString.charCodeAt(i);
+      }
+
+      const { data, error } = await supabase
+        .storage
+        .from('voice_messages')
+        .upload(filePath, byteArray, { contentType: `audio/${fileExt}` });
+      if (error) {
+        throw new Error(`Failed to upload audio: ${error.message}`);
+      }
+
+      // Step 3: Get the public URL of the uploaded audio
+      const { data: publicUrlData } = supabase.storage.from('voice_messages').getPublicUrl(filePath);
+      const audioUrl = publicUrlData.publicUrl;
+
+      // Step 4: Send the audio URL as a message
+      const message = {
+        chat_id: chatId,
+        created_by: userId,
+        type: 'audio',
+        text: '',
+        media_url: audioUrl,
+      };
+
+      // Insert the message into your messages table
+      const { data: messageData, error: messageError } = await supabase.from('message').insert(message);
+      if (messageError) {
+        throw new Error(`Failed to send message: ${messageError.message}`);
+      }
+
+      console.log('Audio message sent successfully:', messageData);
+      return messageData;
+    } catch (error) {
+      console.error('Error sending audio message:', error);
       throw error;
     }
   }
