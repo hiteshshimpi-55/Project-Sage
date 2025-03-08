@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -14,12 +14,12 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import supabase from '../../core/supabase';
-import { ChatService, Message } from '../../utils/chat_service';
-import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from 'src/App';
+import {ChatService, Message} from '../../utils/chat_service';
+import {RouteProp} from '@react-navigation/native';
+import {RootStackParamList} from 'src/App';
 import theme from '@utils/theme';
 import {
   PaperPlaneTilt,
@@ -31,9 +31,10 @@ import {
   CaretLeft,
   Image as ImageIcon,
 } from 'phosphor-react-native';
-import { useNavigation } from '@react-navigation/native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import {useNavigation} from '@react-navigation/native';
+import {launchImageLibrary} from 'react-native-image-picker';
 import AudioPlayer from '@components/molecules/Chat/AudioPlayer';
+import {useUser} from '@hooks/UserContext';
 
 // Types
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
@@ -43,14 +44,16 @@ interface ChatScreenProps {
   route: ChatScreenRouteProp;
 }
 
-const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
+const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   const navigation = useNavigation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const [currentChatUserId, setCurrentChatUserId] = useState<string | null>(null);
+  const [currentChatUserId, setCurrentChatUserId] = useState<string | null>(
+    null,
+  );
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [usernames, setUsernames] = useState<{ [key: string]: string }>({});
+  const [usernames, setUsernames] = useState<{[key: string]: string}>({});
   const [chatUserName, setChatUserName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -60,13 +63,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const [currentPosition, setCurrentPosition] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  const { user:userContext } = useUser();
+
   const initialize = useCallback(async () => {
     try {
       const currentUserId = await ChatService.getCurrentUserId();
       if (!currentUserId) return;
-      const chatDetails = await ChatService.getChatDetails(currentUserId, route.params.id, route.params.type);
+      const chatDetails = await ChatService.getChatDetails(
+        currentUserId,
+        route.params.id,
+        route.params.type,
+      );
       if (!chatDetails) return;
-      const { chatId, chatUserId } = chatDetails;
+      const {chatId, chatUserId} = chatDetails;
       if (!chatId || !chatUserId) return;
       setCurrentChatId(chatId);
       setCurrentChatUserId(chatUserId);
@@ -81,11 +90,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     if (!currentChatId) return;
 
     try {
-      const { data, error } = await supabase
+      const {data, error} = await supabase
         .from('message')
         .select('*')
         .eq('chat_id', currentChatId)
-        .order('created_at', { ascending: false })
+        .order('created_at', {ascending: false})
         .limit(50);
 
       if (error) {
@@ -103,7 +112,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     if (!currentChatId) return;
 
     try {
-      const userMap = await ChatService.getAllUsersFromSystemWithChatUserId(currentChatId);
+      const userMap = await ChatService.getAllUsersFromSystemWithChatUserId(
+        currentChatId,
+      );
       setUsernames(userMap);
     } catch (error) {
       console.error('Error fetching usernames:', error);
@@ -123,10 +134,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           table: 'message',
           filter: `chat_id=eq.${currentChatId}`,
         },
-        (payload) => {
+        payload => {
           const newMessage = payload.new as Message;
-          setMessages((prevMessages) => [newMessage, ...prevMessages]);
-        }
+          setMessages(prevMessages => [newMessage, ...prevMessages]);
+        },
       )
       .subscribe();
 
@@ -142,25 +153,45 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
       await sendAudio();
     } else {
       if (!inputText.trim()) return;
-      await ChatService.sendTextMessage(currentChatId, currentChatUserId!, inputText.trim())
+      await ChatService.sendTextMessage(
+        currentChatId,
+        currentChatUserId!,
+        inputText.trim(),
+      )
         .then(() => {
           setInputText('');
         })
-        .catch((error) => {
-        console.error('Error sending message:', error);
-        Alert.alert('Error', error.message);
-      });
+        .catch(error => {
+          console.error('Error sending message:', error);
+          Alert.alert('Error', error.message);
+        });
     }
   };
+
+  const deleteMessage = async (messageId: string) => {
+
+    try {
+      await ChatService.deleteMessage(messageId)
+      const updatedMessages = messages.filter(message => message.id !== messageId);
+      setMessages(updatedMessages);
+    } catch (error:any) {
+      console.error('Error deleting message:', error);
+      Alert.alert('Error', error.message);
+    }
+  }
 
   const handleSendImage = async (imageUri: string) => {
     if (!currentChatId || !currentChatUserId || !currentUserId) return;
     setIsLoading(true);
-    await ChatService.sendImageMessage(currentChatId, currentChatUserId, imageUri)
+    await ChatService.sendImageMessage(
+      currentChatId,
+      currentChatUserId,
+      imageUri,
+    )
       .then(() => {
         setIsLoading(false);
       })
-      .catch((error) => {
+      .catch(error => {
         setIsLoading(false);
         console.error('Error sending image:', error);
         Alert.alert('Error', error.message);
@@ -181,46 +212,70 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     }
   };
 
-  const renderMessage = ({ item }: { item: Message }) => {
+  const handleLongPress = (itemId:any) => {
+
+    console.log('Long Pressed', itemId);
+    console.log('User Context', userContext!);
+    if (!userContext?.isAdmin) return;
+
+    Alert.alert(
+      'Delete Message',
+      'Are you sure you want to delete this message?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteMessage(itemId),
+        },
+      ],
+    );
+  };
+
+  const renderMessage = ({item}: {item: Message}) => {
     const isCurrentUser = item.created_by === currentChatUserId;
     return (
-      <View
-        style={[
-          styles.messageBubble,
-          isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
-        ]}
-      >
-        {route.params.type === 'one-to-many' && !isCurrentUser && usernames[item.created_by] && (
-          <Text style={styles.username}>{usernames[item.created_by]}</Text>
-        )}
-        {item.type === 'image' ? (
-          <Image source={{ uri: item.media_url }} style={styles.imageMessage} />
-        ) :
-        item.type === 'audio' ? (
-          <AudioPlayer audioUrl={item.media_url} />
-        ) :
-        (
+      <TouchableOpacity onLongPress={()=>handleLongPress(item.id)} activeOpacity={0.9}>
+        <View
+          style={[
+            styles.messageBubble,
+            isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
+          ]}>
+          {route.params.type === 'one-to-many' &&
+            !isCurrentUser &&
+            usernames[item.created_by] && (
+              <Text style={styles.username}>{usernames[item.created_by]}</Text>
+            )}
+          {item.type === 'image' ? (
+            <Image source={{uri: item.media_url}} style={styles.imageMessage} />
+          ) : item.type === 'audio' ? (
+            <AudioPlayer audioUrl={item.media_url} />
+          ) : (
+            <Text
+              style={[
+                styles.messageText,
+                isCurrentUser ? styles.currentUserText : styles.otherUserText,
+              ]}>
+              {item.text}
+            </Text>
+          )}
           <Text
-            style={[
-              styles.messageText,
-              isCurrentUser ? styles.currentUserText : styles.otherUserText,
-            ]}
-          >
-            {item.text}
+            style={
+              isCurrentUser
+                ? styles.currentUserTimeText
+                : styles.otherUserTimeText
+            }>
+            {new Date(item.created_at).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </Text>
-        )}
-        <Text style={isCurrentUser ? styles.currentUserTimeText : styles.otherUserTimeText}>
-          {new Date(item.created_at).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </Text>
-      </View>
+        </View>
+      </TouchableOpacity>
     );
   };
 
   // Voice Recording
-
   const requestPermission = async () => {
     if (Platform.OS === 'android') {
       const granted = await PermissionsAndroid.request(
@@ -229,13 +284,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           title: 'Microphone Permission',
           message: 'This app needs access to your microphone to record audio.',
           buttonPositive: 'OK',
-        }
+        },
       );
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     } else {
       const permission = PERMISSIONS.IOS.MICROPHONE;
       const status = await check(permission);
-  
+
       if (status === RESULTS.GRANTED) {
         return true;
       } else {
@@ -247,7 +302,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
 
   const startRecording = async () => {
     try {
-
       // const hasPermission = await requestPermission();
       // if (!hasPermission) {
       //   console.warn('Microphone permission denied');
@@ -261,7 +315,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
       const interval = setInterval(() => {
         counter += 1;
         setRecordingDuration(
-          `${Math.floor(counter / 60)}:${(counter % 60).toString().padStart(2, '0')}`
+          `${Math.floor(counter / 60)}:${(counter % 60)
+            .toString()
+            .padStart(2, '0')}`,
         );
       }, 1000);
 
@@ -286,7 +342,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     if (!audioPath) return;
     setIsPlaying(true);
     await audioRecorderPlayer.startPlayer(audioPath);
-    audioRecorderPlayer.addPlayBackListener((e) => {
+    audioRecorderPlayer.addPlayBackListener(e => {
       setCurrentPosition(e.currentPosition);
       setDuration(e.duration);
       if (e.currentPosition === e.duration) {
@@ -333,7 +389,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const sendAudio = async () => {
     if (!audioPath || !currentChatId) return;
     setIsLoading(true);
-    await ChatService.sendAudioMessage(currentChatId, currentChatUserId!, audioPath);
+    await ChatService.sendAudioMessage(
+      currentChatId,
+      currentChatUserId!,
+      audioPath,
+    );
     setIsLoading(false);
     setAudioPath(null);
     deleteRecording();
@@ -351,29 +411,35 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.appBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}>
           <CaretLeft size={24} color={theme.colors.text_700} weight="bold" />
         </TouchableOpacity>
-        <Image source={{ uri: 'https://picsum.photos/200/300' }} style={styles.profileImage} />
+        <Image
+          source={{uri: 'https://picsum.photos/200/300'}}
+          style={styles.profileImage}
+        />
         <Text style={styles.appBarText}>{chatUserName}</Text>
       </View>
       <View style={styles.divider} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-      >
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}>
         <FlatList
           data={messages}
           renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           inverted
           style={styles.messageList}
           contentContainerStyle={styles.messageList}
         />
         <View style={styles.inputContainer}>
           {/* Left static image picker button */}
-          <TouchableOpacity onPress={handleImagePicker} style={styles.imageButton}>
+          <TouchableOpacity
+            onPress={handleImagePicker}
+            style={styles.imageButton}>
             <ImageIcon size={24} color={theme.colors.primary_600} />
           </TouchableOpacity>
 
@@ -387,25 +453,37 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
               <View style={styles.audioPreview}>
                 <TouchableOpacity onPress={togglePlayback}>
                   {isPlaying ? (
-                    <Pause weight="fill" size={24} color={theme.colors.primary_400} />
+                    <Pause
+                      weight="fill"
+                      size={24}
+                      color={theme.colors.primary_400}
+                    />
                   ) : (
-                    <Play weight="fill" size={24} color={theme.colors.primary_400} />
+                    <Play
+                      weight="fill"
+                      size={24}
+                      color={theme.colors.primary_400}
+                    />
                   )}
                 </TouchableOpacity>
                 <View style={styles.progressContainer}>
-                    <View style={styles.progressBackground} />
-                    <View
-                      style={[
-                        styles.progressBar,
-                        { width: duration ? `${(currentPosition / duration) * 100}%` : '0%' },
-                      ]}
-                    />
-                    <Text style={styles.progressText}>
-                      {new Date(currentPosition).toISOString().substr(14, 5)} /{' '}
-                      {new Date(duration).toISOString().substr(14, 5)}
-                    </Text>
-                  </View>
-              
+                  <View style={styles.progressBackground} />
+                  <View
+                    style={[
+                      styles.progressBar,
+                      {
+                        width: duration
+                          ? `${(currentPosition / duration) * 100}%`
+                          : '0%',
+                      },
+                    ]}
+                  />
+                  <Text style={styles.progressText}>
+                    {new Date(currentPosition).toISOString().substr(14, 5)} /{' '}
+                    {new Date(duration).toISOString().substr(14, 5)}
+                  </Text>
+                </View>
+
                 <TouchableOpacity onPress={deleteRecording}>
                   <Trash size={24} color={theme.colors.secondary} />
                 </TouchableOpacity>
@@ -424,18 +502,27 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           </View>
 
           <View style={styles.rightButtons}>
-            {!audioPath && !isPlaying && (<TouchableOpacity
-              onPress={isRecording ? stopRecording : startRecording}
-              style={styles.recordButton}
-            >
-              {isRecording ? (
-                <Stop size={24} weight="fill" color={theme.colors.primary_600} />
-              ) : (
-                <Microphone size={24} color={theme.colors.primary_600} />
-              )}
-            </TouchableOpacity>)}
+            {!audioPath && !isPlaying && (
+              <TouchableOpacity
+                onPress={isRecording ? stopRecording : startRecording}
+                style={styles.recordButton}>
+                {isRecording ? (
+                  <Stop
+                    size={24}
+                    weight="fill"
+                    color={theme.colors.primary_600}
+                  />
+                ) : (
+                  <Microphone size={24} color={theme.colors.primary_600} />
+                )}
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-              <PaperPlaneTilt weight="fill" size={32} color={theme.colors.primary_600} />
+              <PaperPlaneTilt
+                weight="fill"
+                size={32}
+                color={theme.colors.primary_600}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -559,7 +646,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   audioPreview: {
-    flex:1,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -571,7 +658,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     height: 10,
-    width:"auto",
+    width: 'auto',
     backgroundColor: theme.colors.grey_300,
     borderRadius: 5,
     marginTop: 8,

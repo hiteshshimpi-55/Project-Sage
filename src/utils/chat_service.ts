@@ -404,6 +404,17 @@ export class ChatService {
     }
   }
 
+  static async deleteMessage(messageId: string){
+      const { data, error } = await supabase
+        .from('message')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) {
+        console.error('Error deleting message:', error);
+        throw error;
+      }
+  }
 
   static async sendImageMessage(chatId: string, userId: string, imageSystemPath: string) {
     try {

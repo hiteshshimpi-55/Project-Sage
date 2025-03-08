@@ -9,6 +9,7 @@ interface User {
   gender?: string;
   age?: number;
   dob?: string;
+  isAdmin: boolean;
 }
 
 interface UserContextProps {

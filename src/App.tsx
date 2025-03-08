@@ -21,8 +21,9 @@ import ChannelDetailsScreen from './screens/channels/ChannelDetail';
 
 
 // 
-import { UserProvider } from './hooks/UserContext';
+import { setUserContext, UserProvider, useUser } from './hooks/UserContext';
 import theme from '@utils/theme';
+import { User, UserMetadata, UserResponse } from '@supabase/supabase-js';
 
 export type RootStackParamList = {
   Signup: undefined;
@@ -43,19 +44,48 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-function App(): React.JSX.Element {
+function AppContent(): React.JSX.Element {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const {user,setUser} = useUser();
 
   const checkUserSession = async () => {
     const { data: sessionData } = await supabase.auth.getSession();
     if (sessionData?.session) {
+      await getCurrentUser();
       setIsAuthenticated(true); 
     } else {
       setIsAuthenticated(false); 
     }
     setIsLoading(false);
   };
+
+
+  const transformUserContext = (user: User) => {
+    const metadata = user.user_metadata
+    return {
+      id: metadata.id!,
+      fullName: metadata.full_name!,
+      phone: user.phone!,
+      role: metadata.role!,
+      status: metadata.status,
+      gender: metadata.gender,
+      age: metadata.age,
+      dob: metadata.dob,
+      isAdmin: metadata.role === 'admin',
+    };
+  }
+
+  const getCurrentUser = async () => {
+    console.log("Getting current user");
+    const user:UserResponse = await supabase.auth.getUser();
+    if (!user.error) {
+      console.log("User data", user.data);
+      const transformedUser = transformUserContext(user.data!.user);
+      console.log("Transformed user", transformedUser);
+      setUser(transformedUser);
+    }
+  }
 
   useEffect(() => {
     checkUserSession();
@@ -70,7 +100,6 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <UserProvider>
       <NavigationContainer>
         <SafeAreaView style={styles.safeArea}>
           <Stack.Navigator initialRouteName={isAuthenticated ? 'Home' : 'Login'}>
@@ -92,7 +121,6 @@ function App(): React.JSX.Element {
           </Stack.Navigator>
         </SafeAreaView>
       </NavigationContainer>
-    </UserProvider>
   );
 }
 
@@ -109,4 +137,12 @@ const styles = StyleSheet.create({
   },
 });
 
+
+function App(): React.JSX.Element {
+  return (
+    <UserProvider>
+      <AppContent />
+    </UserProvider>
+  );
+}
 export default App;
