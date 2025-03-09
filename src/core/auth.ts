@@ -22,8 +22,8 @@ export const signUp = async ({ phone, password, fullName, gender, age, dob }: Si
       options: {
         data: {
           full_name: fullName,
-          role: 'admin', // Default role
-          status: 'inactive', // Default status
+          role: 'user',
+          status: 'inactive',
           gender: gender || null,
           age: age || null,
           dob: dob || null,

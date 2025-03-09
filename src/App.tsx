@@ -24,6 +24,7 @@ import ChannelDetailsScreen from './screens/channels/ChannelDetail';
 import { setUserContext, UserProvider, useUser } from './hooks/UserContext';
 import theme from '@utils/theme';
 import { User, UserMetadata, UserResponse } from '@supabase/supabase-js';
+import UserHoveringScreen from './screens/static/UserHoveringScreen';
 
 export type RootStackParamList = {
   Signup: undefined;
@@ -100,6 +101,7 @@ function AppContent(): React.JSX.Element {
   }
 
   return (
+      user?.status === 'inactive' ? <UserHoveringScreen /> :
       <NavigationContainer>
         <SafeAreaView style={styles.safeArea}>
           <Stack.Navigator initialRouteName={isAuthenticated ? 'Home' : 'Login'}>
