@@ -1,6 +1,7 @@
 import { User } from "@supabase/supabase-js";
 import RNFS from 'react-native-fs';
 import supabase, { adminAuthClient } from "../core/supabase";
+import { useUser } from "@hooks/UserContext";
 
 
 interface ChatsCheckResponse {
@@ -44,8 +45,8 @@ export class ChatService {
     }
     return user?.id || null;
   }
-  public static async getAllUsers(user_id: string): Promise<ChatListUser[]> {
 
+  public static async getAllUsers(user_id: string, is_admin: boolean): Promise<ChatListUser[]> {
     const { data, error } = await adminAuthClient.listUsers();
 
     if (error) {
@@ -53,16 +54,113 @@ export class ChatService {
       return [];
     }
 
-    const filteredUsers = data.users.filter(user => user.id !== user_id);
+    let filteredUsers = data.users
+      .filter(user => user.id !== user_id)
+      .map((user: User) => ({
+        id: user.id,
+        type: 'one-to-one',
+        name: user.user_metadata?.full_name || 'Unknown',
+        phone: user.phone || 'N/A'
+      }));
 
-    return filteredUsers.map((user: User) => ({
-      id: user.id,
-      type: 'one-to-one',
-      name: user.user_metadata?.full_name || 'Unknown',
-      phone: user.phone || 'N/A',
-    }));
+    // Step 1: Fetch chat_user records for the current user
+    const { data: chatUserData, error: chatUserError } = await supabase
+      .from('chat_user')
+      .select('*')
+      .eq('user_id', user_id);
+
+    if (chatUserError) {
+      console.error("Error fetching chat_user data:", chatUserError);
+      return [];
+    }
+
+    // Extract chat IDs from the chat_user records
+    const chatIds = chatUserData.map((chat: any) => chat.chat_id);
+
+    if (chatIds.length === 0) {
+      console.log("No chats found for the user.");
+      // For admins, return all users with empty chat data
+      if (is_admin) {
+        return filteredUsers.map(user => ({
+          ...user,
+          latest_message: '',
+          latest_message_time: '',
+          unread_count: 0
+        }));
+      }
+      return [];
+    }
+
+    // Step 2: Fetch chats using the extracted chat IDs
+    const { data: chatData, error: chatError } = await supabase
+      .from('chat')
+      .select('*')
+      .in('id', chatIds)
+      .eq('type', 'one-to-one');
+
+    if (chatError) {
+      console.error("Error fetching chats:", chatError);
+      return filteredUsers;
+    }
+
+    // Step 3: Get all users that are in the same one-to-one chats as the current user
+    const { data: chatUsers, error: chatUsersError } = await supabase
+      .from('chat_user')
+      .select('*')
+      .in('chat_id', chatIds)
+      .neq('user_id', user_id);
+
+    if (chatUsersError) {
+      console.error("Error fetching other chat users:", chatUsersError);
+      return filteredUsers;
+    }
+
+    // Create a map of userId to chatId for quick lookup
+    const userChatMap:any = {};
+    chatUsers.forEach(cu => {
+      userChatMap[cu.user_id] = cu.chat_id;
+    });
+
+    // Map users with their latest chat and unread messages
+    let final_data = await Promise.all(
+      filteredUsers.map(async (user) => {
+        // Get the chat ID this user shares with the current user
+        const chatId = userChatMap[user.id];
+        
+        // If no shared chat and not admin, skip this user
+        if (!chatId && !is_admin) {
+          
+        }
+        
+        // For admins or users with chats
+        if (chatId) {
+          const latestMessage = await this.getLastMessageOfChat(chatId);
+          const unreadCount = await this.getUnreadMessagesCount(chatId, user_id);
+          
+          return {
+            ...user,
+            chat_id: chatId,
+            latest_message: latestMessage?.text || '',
+            latest_message_time: latestMessage?.created_at || '',
+            unread_count: unreadCount || 0,
+          };
+        } else {
+          // For admins with users that don't have chats
+          return {
+            ...user,
+            latest_message: '',
+            latest_message_time: '',
+            unread_count: 0
+          };
+        }
+      })
+    );
+
+    // Filter out null values (users without chats for non-admins)
+    final_data = final_data.filter(user => user !== null);
+
+    return final_data || [];
   }
-
   public static async getAllUsersFromSystemWithChatUserId(chat_id: string): Promise<Record<string, string>> {
     try {
       // Fetch all users from the authentication system

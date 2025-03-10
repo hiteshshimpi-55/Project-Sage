@@ -101,7 +101,6 @@ function AppContent(): React.JSX.Element {
   }
 
   return (
-      user?.status === 'inactive' ? <UserHoveringScreen /> :
       <NavigationContainer>
         <SafeAreaView style={styles.safeArea}>
           <Stack.Navigator initialRouteName={isAuthenticated ? 'Home' : 'Login'}>

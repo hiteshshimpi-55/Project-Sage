@@ -1,26 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, TextInput, Modal } from 'react-native';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ChatListUser, ChatService } from '../../utils/chat_service';
 import { RootStackParamList } from '../../App';
 import theme from '@utils/theme';
+import { useUser } from '@hooks/UserContext';
 
 const ChatListing: React.FC = () => {
+  const{user:currentUser} = useUser();
   const [users, setUsers] = useState<ChatListUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentUserId, setCurrentUserId] = useState<string>('');
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     loadUsers();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadUsers();
+    }, [])
+  );
+
   const loadUsers = async () => {
     try {
       const currentUserId = await ChatService.getCurrentUserId();
-      setCurrentUserId(currentUserId!);
       if (currentUserId) {
-        const fetchedUsers = await ChatService.getAllUsers(currentUserId);
+        const fetchedUsers = await ChatService.getAllUsers(currentUserId,currentUser?.isAdmin!);
         setUsers(fetchedUsers);
       }
     } catch (error) {
@@ -46,7 +52,9 @@ const ChatListing: React.FC = () => {
       />
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.name!}</Text>
-        {item.phone && <Text>{`+${item.phone}`}</Text>}
+        <Text style={styles.latestMessage} numberOfLines={1}>
+          {item.latest_message || 'No messages yet'}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -116,7 +124,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: theme.fonts.satoshi_bold,
     fontWeight: 'bold',
-  }
+  },
+  latestMessage: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  unreadBadge: {
+    backgroundColor: 'red',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  unreadCountText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
 });
 
 export default ChatListing;
