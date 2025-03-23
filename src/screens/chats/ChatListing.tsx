@@ -1,14 +1,36 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, TextInput, Modal } from 'react-native';
-import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
-import { ChatListUser, ChatService } from '../../utils/chat_service';
-import { RootStackParamList } from '../../App';
+import React, {useCallback, useEffect, useState} from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  TextInput,
+  Modal,
+  Alert,
+} from 'react-native';
+import {
+  NavigationProp,
+  useFocusEffect,
+  useNavigation,
+} from '@react-navigation/native';
+
+import {ChatUser} from './service/chat_listing_service';
+import {RootStackParamList} from '../../App';
 import theme from '@utils/theme';
-import { useUser } from '@hooks/UserContext';
+import {useUser} from '@hooks/UserContext';
+import {ChatListingService} from './service/chat_listing_service';
+
+
+const formatTime = (timestamp: string) => {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
 
 const ChatListing: React.FC = () => {
-  const{user:currentUser} = useUser();
-  const [users, setUsers] = useState<ChatListUser[]>([]);
+  const {user: currentUser} = useUser();
+  const [users, setUsers] = useState<ChatUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
@@ -19,16 +41,17 @@ const ChatListing: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       loadUsers();
-    }, [])
+    }, []),
   );
 
   const loadUsers = async () => {
     try {
-      const currentUserId = await ChatService.getCurrentUserId();
-      if (currentUserId) {
-        const fetchedUsers = await ChatService.getAllUsers(currentUserId,currentUser?.isAdmin!);
-        setUsers(fetchedUsers);
-      }
+      const data = await ChatListingService.get_chat_listing_page(
+        currentUser?.id!,
+        currentUser?.isAdmin!,
+      );
+      console.log('Data:', data);
+      setUsers(data);
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -39,25 +62,60 @@ const ChatListing: React.FC = () => {
     return fullName.includes(searchQuery.toLowerCase());
   });
 
-  const renderUser = ({ item }: { item: ChatListUser }) => (
-    <TouchableOpacity
+
+
+  const renderUser = ({ item }: { item: ChatUser })=>{
+
+    const getMessagePreview = () => {
+      switch (item.last_message_type) {
+        case 'image':
+          return '📷 Image';
+        case 'audio':
+          return '🎵 Audio';
+        case 'video':
+          return '📹 Video';
+        case 'file':
+          return '📁 File';
+        case 'text':
+          return item.last_message;
+        default:
+          return 'No messages yet';
+      }
+    };
+
+    return (<TouchableOpacity
       style={styles.userItem}
-      onPress={() => { navigation.navigate('ChatScreen', { id: item.id!, type: item.type!, name: item.name! }); }}
+      onPress={() => {
+          navigation.navigate('ChatScreen', {
+            id: item.user_id!,
+            type: item.chat_type!,
+            name: item.name!,
+          });      }}
     >
       <Image
-        source={{
-          uri: 'https://picsum.photos/200/300', // Dummy profile picture URL
-        }}
+        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name ?? "")}&background=random` }}
         style={styles.profilePic}
       />
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{item.name!}</Text>
+
+      <View style={styles.textContainer}>
+        <Text style={styles.userName}>{item.name}</Text>
         <Text style={styles.latestMessage} numberOfLines={1}>
-          {item.latest_message || 'No messages yet'}
+          {getMessagePreview()}
         </Text>
       </View>
-    </TouchableOpacity>
-  );
+
+      <View style={styles.metaContainer}>
+        <Text style={styles.messageTime}>
+          {item.last_message_time ? formatTime(item.last_message_time) : ''}
+        </Text>
+        {item.unread_message_count! > 0 && (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadCountText}>{item.unread_message_count}</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>);
+  }
 
   return (
     <View style={styles.container}>
@@ -74,7 +132,7 @@ const ChatListing: React.FC = () => {
       <FlatList
         data={filteredUsers}
         renderItem={renderUser}
-        keyExtractor={(item) => item.id!}
+        keyExtractor={item => item.chat_id ?? item.user_id}
         contentContainerStyle={styles.listContainer}
       />
     </View>
@@ -143,6 +201,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  metaContainer: {
+    alignItems: 'flex-end',
+  },
+  messageTime: {
+    fontSize: 12,
+    color: '#888',
+  },
+  textContainer: {
+    flex: 1,
   },
 });
 

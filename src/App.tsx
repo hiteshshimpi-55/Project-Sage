@@ -65,7 +65,7 @@ function AppContent(): React.JSX.Element {
   const transformUserContext = (user: User) => {
     const metadata = user.user_metadata
     return {
-      id: metadata.id!,
+      id: user.id!,
       fullName: metadata.full_name!,
       phone: user.phone!,
       role: metadata.role!,
