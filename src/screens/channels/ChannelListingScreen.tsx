@@ -2,10 +2,12 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Image, ActivityIndicator, Alert } from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
-import { ChatListUser, ChatService } from '../../utils/chat_service';
 import { RootStackParamList } from '../../App';
 import theme from '@utils/theme';
 import { Plus } from 'phosphor-react-native';
+import { Channel, ChannelListingService } from './service/channel_service';
+import { useUser } from '@hooks/UserContext';
+import { ServiceFunctions } from '../../utils/service';
 
 const formatTime = (timestamp: string) => {
   const date = new Date(timestamp);
@@ -13,10 +15,12 @@ const formatTime = (timestamp: string) => {
 };
 
 const ChannelListing: React.FC = () => {
-  const [users, setUsers] = useState<ChatListUser[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
+  const {user:current_user} = useUser();
 
   useEffect(() => {
     loadUsers();
@@ -31,11 +35,8 @@ const ChannelListing: React.FC = () => {
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      const currentUserId = await ChatService.getCurrentUserId();
-      if (currentUserId) {
-        const groups = await ChatService.getGroups(currentUserId);
-        setUsers(groups);
-      }
+      const data = await ChannelListingService.get_chat_listing_page(current_user!.id);
+      setChannels(data);
     } catch (error:any) {
       Alert.alert(error);
     } finally {
@@ -43,12 +44,12 @@ const ChannelListing: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = channels.filter((user) => {
     const fullName = user.name!.toLowerCase();
     return fullName.includes(searchQuery.toLowerCase());
   });
 
-  const renderUser = ({ item }: { item: ChatListUser }) => (
+  const renderUser = ({ item }: { item: Channel }) => (
     <TouchableOpacity
       style={styles.userItem}
       onPress={() => {
@@ -63,17 +64,17 @@ const ChannelListing: React.FC = () => {
       <View style={styles.textContainer}>
         <Text style={styles.userName}>{item.name}</Text>
         <Text style={styles.latestMessage} numberOfLines={1}>
-          {item.latest_message || 'No messages yet'}
+          {ServiceFunctions.getMessagePreview(item.last_message_type!, item.last_message!)}
         </Text>
       </View>
 
       <View style={styles.metaContainer}>
         <Text style={styles.messageTime}>
-          {item.latest_message_time ? formatTime(item.latest_message_time) : ''}
+          {item.last_message_time ? formatTime(item.last_message_time) : ''}
         </Text>
-        {item.unread_count! > 0 && (
+        {item.unread_message_count! > 0 && (
           <View style={styles.unreadBadge}>
-            <Text style={styles.unreadCountText}>{item.unread_count}</Text>
+            <Text style={styles.unreadCountText}>{item.unread_message_count}</Text>
           </View>
         )}
       </View>
