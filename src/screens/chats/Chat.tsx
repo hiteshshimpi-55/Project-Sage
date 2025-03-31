@@ -86,9 +86,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         chat_id,
       );
 
+      if (chat_user_id === null ){
+        throw new Error('Chat User ID not found');
+      }
       console.log("Chat ID",chat_id,chat_user_id);
       setCurrentChatId(chat_id);
       setCurrentChatUserId(chat_user_id);
+      await ChatServiceV2.markAsRead(chat_user_id!);
     } catch (error) {
       console.error('Error initializing chat:', error);
     }

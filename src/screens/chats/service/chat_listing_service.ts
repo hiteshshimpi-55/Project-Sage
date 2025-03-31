@@ -69,17 +69,13 @@ export class ChatListingService {
   }
   public static async get_chat_listing_page(current_user_id: string, is_admin:boolean = false) {
 
-    console.log(is_admin);
-    console.log("Current User Id: ",current_user_id);
     const users = await this.get_users(current_user_id);
     const ongoing_chats = await this.get_user_ongoing_chats(current_user_id);
     const ongoing_chat_ids = ongoing_chats.map(chat => chat.user_id);
-    console.log(ongoing_chat_ids.length);
     if (!is_admin) {
       return ongoing_chats;
     }
     const filteredUsers = users.filter(user => !ongoing_chat_ids.includes(user.user_id));
-    console.log(filteredUsers.length);
     return [...ongoing_chats, ...filteredUsers];
   }
 }
