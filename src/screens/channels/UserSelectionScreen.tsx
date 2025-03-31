@@ -4,10 +4,16 @@ import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { ChatListUser, ChatService } from '../../utils/chat_service';
 import { RootStackParamList } from '../../App';
 import theme from '@utils/theme';
+import { ChannelListingService } from './service/channel_service';
+import { useUser } from '@hooks/UserContext';
+import { User } from '@supabase/supabase-js';
 
 const UserSelectionScreen: React.FC = () => {
-  const [users, setUsers] = useState<ChatListUser[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+
+  const {user:currentUser} = useUser();
+
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   useEffect(() => {
@@ -16,10 +22,10 @@ const UserSelectionScreen: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      const userList = await ChatService.getAllUsers('')
-      const currentUserId = await ChatService.getCurrentUserId();
+      const currentUserId = currentUser?.id;
+      const userList = await ChannelListingService.get_all_users(currentUserId!);
       // Filter out the signed-in user
-      const filteredUsers = userList.filter((user) => user.id !== currentUserId);
+      const filteredUsers = userList.filter((user:any) => user.id !== currentUserId);
       setUsers(filteredUsers);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -42,17 +48,17 @@ const UserSelectionScreen: React.FC = () => {
     navigation.navigate('ChannelDetailsScreen', { selectedUsers });
   };
 
-  const renderUser = ({ item }: { item: ChatListUser }) => (
+  const renderUser = ({ item }: { item: User }) => (
     <TouchableOpacity
       style={styles.userItem}
       onPress={() => toggleUserSelection(item.id!)}
     >
       <Image
-        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name??"")}&background=random` }}
+        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item?.user_metadata?.full_name??"")}&background=random` }}
         style={styles.userImage}
       />
       <View style={styles.userInfo}>
-        <Text style={styles.userName}>{item.name!}</Text>
+        <Text style={styles.userName}>{item.user_metadata.full_name!}</Text>
         {item.phone && <Text>{`+${item.phone}`}</Text>}
       </View>
       {selectedUsers.includes(item.id!) && <Text style={styles.selectedText}>✓</Text>}

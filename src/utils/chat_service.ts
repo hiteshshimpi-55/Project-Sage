@@ -413,16 +413,16 @@ export class ChatService {
       let chatUserId: string | null = null;
 
       if (chatType === 'one-to-one') {
-        const existingChat = await ChatService.checkIfChatExists(currentUserId, targetUserId);
+        const existingChat = await this.checkIfChatExists(currentUserId, targetUserId);
 
         if (existingChat?.chat_id) {
           chatId = existingChat.chat_id;
-          chatUserId = await ChatService.getChatUserId(currentUserId, chatId)
-            ?? await ChatService.createChatUser(currentUserId, chatId);
+          chatUserId = await this.getChatUserId(currentUserId, chatId)
+            ?? await this.createChatUser(currentUserId, chatId);
         } else {
-          chatId = await ChatService.createOneToOneChat(targetUserId, currentUserId);
+          chatId = await this.createOneToOneChat(targetUserId, currentUserId);
           if (chatId) {
-            chatUserId = await ChatService.createChatUser(currentUserId, chatId);
+            chatUserId = await this.createChatUser(currentUserId, chatId);
           }
         }
       } else {
@@ -579,6 +579,7 @@ export class ChatService {
 
   static async sendTextMessage(chatId: string, userId: string, text: string) {
     try {
+      console.log('Sending text message:', chatId, userId, text);
       const message = {
         chat_id: chatId,
         created_by: userId,

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import supabase from '../../core/supabase';
 import {ChatService, Message} from '../../utils/chat_service';
+import {ChatServiceV2} from './service/chat_service';
 import {RouteProp} from '@react-navigation/native';
 import {RootStackParamList} from 'src/App';
 import theme from '@utils/theme';
@@ -40,52 +41,60 @@ import {useUser} from '@hooks/UserContext';
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
+
 interface ChatScreenProps {
   route: ChatScreenRouteProp;
 }
 
 const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   const navigation = useNavigation();
+  const {user: userContext} = useUser();
+  
+  // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const [currentChatUserId, setCurrentChatUserId] = useState<string | null>(
-    null,
-  );
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentChatUserId, setCurrentChatUserId] = useState<string | null>(null);
   const [usernames, setUsernames] = useState<{[key: string]: string}>({});
-  const [chatUserName, setChatUserName] = useState<string>('');
+  const [chatUserName, setChatUserName] = useState<string>(route.params.name || '');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Audio recording states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState('0:00');
   const [audioPath, setAudioPath] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [duration, setDuration] = useState(0);
-
-  const { user:userContext } = useUser();
-
+  
+  // Initialize chat
   const initialize = useCallback(async () => {
+    if (!userContext?.id) return;    
     try {
-      const currentUserId = await ChatService.getCurrentUserId();
-      if (!currentUserId) return;
-      const chatDetails = await ChatService.getChatDetails(
-        currentUserId,
-        route.params.id,
-        route.params.type,
+
+      let chat_id:any = null;
+      if (route.params.type === 'one-to-many') {
+        chat_id = route.params.id;
+      }else{
+        chat_id = await ChatServiceV2.get_or_create_chat(
+          userContext.id,
+          route.params.id
+        );
+      }
+      const chat_user_id = await ChatService.getChatUserId(
+        userContext.id,
+        chat_id,
       );
-      if (!chatDetails) return;
-      const {chatId, chatUserId} = chatDetails;
-      if (!chatId || !chatUserId) return;
-      setCurrentChatId(chatId);
-      setCurrentChatUserId(chatUserId);
-      setCurrentUserId(currentUserId);
-      setChatUserName(route.params.name);
+
+      console.log("Chat ID",chat_id,chat_user_id);
+      setCurrentChatId(chat_id);
+      setCurrentChatUserId(chat_user_id);
     } catch (error) {
       console.error('Error initializing chat:', error);
     }
-  }, [route.params.id, route.params.name]);
+  }, [userContext?.id, route.params.id]);
 
+  // Fetch messages
   const fetchMessages = useCallback(async () => {
     if (!currentChatId) return;
 
@@ -108,6 +117,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     }
   }, [currentChatId]);
 
+  // Fetch usernames
   const fetchAndSetUsernames = useCallback(async () => {
     if (!currentChatId) return;
 
@@ -121,6 +131,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     }
   }, [currentChatId]);
 
+  // Setup real-time subscription
   useEffect(() => {
     if (!currentChatId) return;
 
@@ -146,76 +157,89 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     };
   }, [currentChatId]);
 
+  // Initialize effects
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  useEffect(() => {
+    if (currentChatId) {
+      fetchMessages();
+      fetchAndSetUsernames();
+    }
+  }, [currentChatId, fetchMessages, fetchAndSetUsernames]);
+
+  // Message functions
   const handleSend = async () => {
-    if (!currentChatId || !currentUserId) return;
-    if (audioPath) {
-      console.log('Sending audio:', audioPath);
-      await sendAudio();
-    } else {
-      if (!inputText.trim()) return;
-      await ChatService.sendTextMessage(
-        currentChatId,
-        currentChatUserId!,
-        inputText.trim(),
-      )
-        .then(() => {
-          setInputText('');
-        })
-        .catch(error => {
-          console.error('Error sending message:', error);
-          Alert.alert('Error', error.message);
-        });
+
+    console.log("handleSend",currentChatId,currentChatUserId,inputText.trim());
+
+    if (!currentChatId || !currentChatUserId) return;
+    try {
+      setIsLoading(true);
+      
+      if (audioPath) {
+        await sendAudio();
+      } else if (inputText.trim()) {
+        await ChatService.sendTextMessage(
+          currentChatId,
+          currentChatUserId,
+          inputText.trim(),
+        );
+        setInputText('');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      Alert.alert('Error', 'Failed to send message');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const deleteMessage = async (messageId: string) => {
-
     try {
-      await ChatService.deleteMessage(messageId)
-      const updatedMessages = messages.filter(message => message.id !== messageId);
-      setMessages(updatedMessages);
-    } catch (error:any) {
+      await ChatService.deleteMessage(messageId);
+      setMessages(prevMessages => prevMessages.filter(message => message.id !== messageId));
+    } catch (error) {
       console.error('Error deleting message:', error);
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', 'Failed to delete message');
     }
-  }
+  };
 
   const handleSendImage = async (imageUri: string) => {
-    if (!currentChatId || !currentChatUserId || !currentUserId) return;
-    setIsLoading(true);
-    await ChatService.sendImageMessage(
-      currentChatId,
-      currentChatUserId,
-      imageUri,
-    )
-      .then(() => {
-        setIsLoading(false);
-      })
-      .catch(error => {
-        setIsLoading(false);
-        console.error('Error sending image:', error);
-        Alert.alert('Error', error.message);
-      });
+    if (!currentChatId || !currentChatUserId) return;
+    
+    try {
+      setIsLoading(true);
+      await ChatService.sendImageMessage(
+        currentChatId,
+        currentChatUserId,
+        imageUri,
+      );
+    } catch (error) {
+      console.error('Error sending image:', error);
+      Alert.alert('Error', 'Failed to send image');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleImagePicker = async () => {
-    const result = await launchImageLibrary({
-      mediaType: 'photo',
-      quality: 0.8,
-    });
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.8,
+      });
 
-    if (result.assets && result.assets.length > 0) {
-      const imageUri = result.assets[0].uri;
-      if (imageUri) {
-        await handleSendImage(imageUri);
+      if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
+        await handleSendImage(result.assets[0].uri);
       }
+    } catch (error) {
+      console.error('Error picking image:', error);
     }
   };
 
-  const handleLongPress = (itemId:any) => {
-
-    console.log('Long Pressed', itemId);
-    console.log('User Context', userContext!);
+  const handleLongPress = (itemId: string) => {
     if (!userContext?.isAdmin) return;
 
     Alert.alert(
@@ -232,10 +256,186 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     );
   };
 
-  const renderMessage = ({item}: {item: Message}) => {
+  // Audio recording functions
+  const requestPermission = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+        {
+          title: 'Microphone Permission',
+          message: 'This app needs access to your microphone to record audio.',
+          buttonPositive: 'OK',
+        },
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } else {
+      const permission = PERMISSIONS.IOS.MICROPHONE;
+      const status = await check(permission);
+
+      if (status === RESULTS.GRANTED) {
+        return true;
+      } else {
+        const newStatus = await request(permission);
+        return newStatus === RESULTS.GRANTED;
+      }
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const hasPermission = await requestPermission();
+      if (!hasPermission) {
+        Alert.alert('Permission Denied', 'Microphone permission is required for recording audio.');
+        return;
+      }
+
+      setIsRecording(true);
+      const path = await audioRecorderPlayer.startRecorder();
+      setAudioPath(path);
+      
+      let counter = 0;
+      const interval = setInterval(() => {
+        counter += 1;
+        setRecordingDuration(
+          `${Math.floor(counter / 60)}:${(counter % 60)
+            .toString()
+            .padStart(2, '0')}`,
+        );
+      }, 1000);
+
+      // Auto-stop after 60 seconds
+      setTimeout(() => {
+        clearInterval(interval);
+        if (isRecording) {
+          stopRecording();
+        }
+      }, 60000);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      setIsRecording(false);
+      Alert.alert('Error', 'Failed to start recording');
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!isRecording) return;
+    
+    try {
+      const path = await audioRecorderPlayer.stopRecorder();
+      setAudioPath(path);
+      setIsRecording(false);
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      setIsRecording(false);
+      Alert.alert('Error', 'Failed to stop recording');
+    }
+  };
+
+  const playAudio = async () => {
+    if (!audioPath) return;
+    
+    try {
+      setIsPlaying(true);
+      await audioRecorderPlayer.startPlayer(audioPath);
+      audioRecorderPlayer.addPlayBackListener(e => {
+        setCurrentPosition(e.currentPosition);
+        setDuration(e.duration);
+        if (e.currentPosition === e.duration) {
+          setIsPlaying(false);
+          audioRecorderPlayer.stopPlayer();
+          audioRecorderPlayer.removePlayBackListener();
+        }
+      });
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      setIsPlaying(false);
+    }
+  };
+
+  const pauseAudio = async () => {
+    if (!audioPath || !isPlaying) return;
+    
+    try {
+      setIsPlaying(false);
+      await audioRecorderPlayer.pausePlayer();
+    } catch (error) {
+      console.error('Error pausing audio:', error);
+    }
+  };
+
+  const resumeAudio = async () => {
+    if (!audioPath) return;
+    
+    try {
+      setIsPlaying(true);
+      await audioRecorderPlayer.resumePlayer();
+    } catch (error) {
+      console.error('Error resuming audio:', error);
+      setIsPlaying(false);
+    }
+  };
+
+  const deleteRecording = () => {
+    audioRecorderPlayer.stopPlayer();
+    audioRecorderPlayer.removePlayBackListener();
+    setAudioPath(null);
+    setIsPlaying(false);
+    setCurrentPosition(0);
+    setDuration(0);
+  };
+
+  const togglePlayback = async () => {
+    if (!audioPath) return;
+
+    if (isPlaying) {
+      await pauseAudio();
+    } else {
+      if (currentPosition > 0 && currentPosition < duration) {
+        await resumeAudio();
+      } else {
+        setCurrentPosition(0);
+        await playAudio();
+      }
+    }
+  };
+
+  const sendAudio = async () => {
+    if (!audioPath || !currentChatId || !currentChatUserId) return;
+    
+    try {
+      await ChatService.sendAudioMessage(
+        currentChatId,
+        currentChatUserId,
+        audioPath,
+      );
+      deleteRecording();
+    } catch (error) {
+      console.error('Error sending audio:', error);
+      Alert.alert('Error', 'Failed to send audio message');
+    }
+  };
+
+  // Cleanup audio resources when component unmounts
+  useEffect(() => {
+    return () => {
+      audioRecorderPlayer.stopRecorder();
+      audioRecorderPlayer.stopPlayer();
+      audioRecorderPlayer.removePlayBackListener();
+    };
+  }, []);
+
+  // Memoized components
+  const renderMessage = useCallback(({item}: {item: Message}) => {
+    console.log("Created By",item.created_by);
+    console.log("Current Chat User",currentChatUserId);
     const isCurrentUser = item.created_by === currentChatUserId;
+    const messageTime = new Date(item.created_at).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
     return (
-      <TouchableOpacity onLongPress={()=>handleLongPress(item.id)} activeOpacity={0.9}>
+      <TouchableOpacity onLongPress={() => handleLongPress(item.id)} activeOpacity={0.9}>
         <View
           style={[
             styles.messageBubble,
@@ -265,151 +465,82 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
                 ? styles.currentUserTimeText
                 : styles.otherUserTimeText
             }>
-            {new Date(item.created_at).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+            {messageTime}
           </Text>
         </View>
       </TouchableOpacity>
     );
-  };
+  }, [currentChatUserId, route.params.type, usernames, handleLongPress]);
 
-  // Voice Recording
-  const requestPermission = async () => {
-    if (Platform.OS === 'android') {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        {
-          title: 'Microphone Permission',
-          message: 'This app needs access to your microphone to record audio.',
-          buttonPositive: 'OK',
-        },
+  // Input area rendering based on state
+  const renderInputArea = useMemo(() => {
+    if (isRecording) {
+      return (
+        <Text style={styles.recordingText}>
+          🎙️ Recording... {recordingDuration}
+        </Text>
       );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } else if (audioPath) {
+      return (
+        <View style={styles.audioPreview}>
+          <TouchableOpacity onPress={togglePlayback}>
+            {isPlaying ? (
+              <Pause weight="fill" size={24} color={theme.colors.primary_400} />
+            ) : (
+              <Play weight="fill" size={24} color={theme.colors.primary_400} />
+            )}
+          </TouchableOpacity>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBackground} />
+            <View
+              style={[
+                styles.progressBar,
+                {
+                  width: duration
+                    ? `${(currentPosition / duration) * 100}%`
+                    : '0%',
+                },
+              ]}
+            />
+            <Text style={styles.progressText}>
+              {new Date(currentPosition).toISOString().substr(14, 5)} /{' '}
+              {new Date(duration).toISOString().substr(14, 5)}
+            </Text>
+          </View>
+
+          <TouchableOpacity onPress={deleteRecording}>
+            <Trash size={24} color={theme.colors.secondary} />
+          </TouchableOpacity>
+        </View>
+      );
     } else {
-      const permission = PERMISSIONS.IOS.MICROPHONE;
-      const status = await check(permission);
-
-      if (status === RESULTS.GRANTED) {
-        return true;
-      } else {
-        const newStatus = await request(permission);
-        return newStatus === RESULTS.GRANTED;
-      }
+      return (
+        <TextInput
+          style={styles.input}
+          value={inputText}
+          onChangeText={setInputText}
+          placeholder="Type a message..."
+          multiline
+          returnKeyType="send"
+          onSubmitEditing={handleSend}
+        />
+      );
     }
-  };
-
-  const startRecording = async () => {
-    try {
-      // const hasPermission = await requestPermission();
-      // if (!hasPermission) {
-      //   console.warn('Microphone permission denied');
-      //   return;
-      // }
-
-      setIsRecording(true);
-      const path = await audioRecorderPlayer.startRecorder();
-      console.log('Recording started:', path);
-      let counter = 0;
-      const interval = setInterval(() => {
-        counter += 1;
-        setRecordingDuration(
-          `${Math.floor(counter / 60)}:${(counter % 60)
-            .toString()
-            .padStart(2, '0')}`,
-        );
-      }, 1000);
-
-      setTimeout(() => clearInterval(interval), 60000);
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      setIsRecording(false);
-    }
-  };
-
-  const stopRecording = async () => {
-    try {
-      const path = await audioRecorderPlayer.stopRecorder();
-      setAudioPath(path);
-      setIsRecording(false);
-    } catch (error) {
-      console.error('Error stopping recording:', error);
-    }
-  };
-
-  const playAudio = async () => {
-    if (!audioPath) return;
-    setIsPlaying(true);
-    await audioRecorderPlayer.startPlayer(audioPath);
-    audioRecorderPlayer.addPlayBackListener(e => {
-      setCurrentPosition(e.currentPosition);
-      setDuration(e.duration);
-      if (e.currentPosition === e.duration) {
-        setIsPlaying(false);
-        audioRecorderPlayer.stopPlayer();
-        audioRecorderPlayer.removePlayBackListener();
-      }
-      return;
-    });
-  };
-
-  const pauseAudio = async () => {
-    if (!audioPath) return;
-    setIsPlaying(false);
-    await audioRecorderPlayer.pausePlayer();
-  };
-
-  const resumeAudio = async () => {
-    if (!audioPath) return;
-    setIsPlaying(true);
-    await audioRecorderPlayer.resumePlayer();
-  };
-
-  const deleteRecording = () => {
-    setAudioPath(null);
-    setIsPlaying(false);
-  };
-
-  const togglePlayback = async () => {
-    if (!audioPath) return;
-
-    if (isPlaying) {
-      await pauseAudio();
-    } else {
-      if (currentPosition > 0 && currentPosition < duration) {
-        await resumeAudio();
-      } else {
-        setCurrentPosition(0);
-        await playAudio();
-      }
-    }
-  };
-
-  const sendAudio = async () => {
-    if (!audioPath || !currentChatId) return;
-    setIsLoading(true);
-    await ChatService.sendAudioMessage(
-      currentChatId,
-      currentChatUserId!,
-      audioPath,
-    );
-    setIsLoading(false);
-    setAudioPath(null);
-    deleteRecording();
-  };
-
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
-
-  useEffect(() => {
-    fetchMessages();
-    fetchAndSetUsernames();
-  }, [fetchMessages, fetchAndSetUsernames]);
+  }, [
+    isRecording, 
+    recordingDuration, 
+    audioPath, 
+    togglePlayback, 
+    isPlaying, 
+    currentPosition, 
+    duration, 
+    deleteRecording, 
+    inputText
+  ]);
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.appBar}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -423,6 +554,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         <Text style={styles.appBarText}>{chatUserName}</Text>
       </View>
       <View style={styles.divider} />
+      
+      {/* Chat area */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.container}
@@ -433,72 +566,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
           keyExtractor={item => item.id}
           inverted
           style={styles.messageList}
-          contentContainerStyle={styles.messageList}
+          contentContainerStyle={styles.messageListContent}
         />
+        
+        {/* Input area */}
         <View style={styles.inputContainer}>
-          {/* Left static image picker button */}
           <TouchableOpacity
             onPress={handleImagePicker}
             style={styles.imageButton}>
             <ImageIcon size={24} color={theme.colors.primary_600} />
           </TouchableOpacity>
 
-          {/* Middle area: text input, recording status, or audio preview */}
           <View style={styles.inputWrapper}>
-            {isRecording ? (
-              <Text style={styles.recordingText}>
-                🎙️ Recording... {recordingDuration}
-              </Text>
-            ) : audioPath && !isRecording ? (
-              <View style={styles.audioPreview}>
-                <TouchableOpacity onPress={togglePlayback}>
-                  {isPlaying ? (
-                    <Pause
-                      weight="fill"
-                      size={24}
-                      color={theme.colors.primary_400}
-                    />
-                  ) : (
-                    <Play
-                      weight="fill"
-                      size={24}
-                      color={theme.colors.primary_400}
-                    />
-                  )}
-                </TouchableOpacity>
-                <View style={styles.progressContainer}>
-                  <View style={styles.progressBackground} />
-                  <View
-                    style={[
-                      styles.progressBar,
-                      {
-                        width: duration
-                          ? `${(currentPosition / duration) * 100}%`
-                          : '0%',
-                      },
-                    ]}
-                  />
-                  <Text style={styles.progressText}>
-                    {new Date(currentPosition).toISOString().substr(14, 5)} /{' '}
-                    {new Date(duration).toISOString().substr(14, 5)}
-                  </Text>
-                </View>
-
-                <TouchableOpacity onPress={deleteRecording}>
-                  <Trash size={24} color={theme.colors.secondary} />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TextInput
-                style={styles.input}
-                value={inputText}
-                onChangeText={setInputText}
-                placeholder="Type a message..."
-                multiline
-                returnKeyType="send"
-                onSubmitEditing={handleSend}
-              />
-            )}
+            {renderInputArea}
           </View>
 
           <View style={styles.rightButtons}>
@@ -507,26 +587,29 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
                 onPress={isRecording ? stopRecording : startRecording}
                 style={styles.recordButton}>
                 {isRecording ? (
-                  <Stop
-                    size={24}
-                    weight="fill"
-                    color={theme.colors.primary_600}
-                  />
+                  <Stop size={24} weight="fill" color={theme.colors.primary_600} />
                 ) : (
                   <Microphone size={24} color={theme.colors.primary_600} />
                 )}
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+            <TouchableOpacity 
+              style={styles.sendButton} 
+              onPress={handleSend}
+              disabled={(!inputText.trim() && !audioPath) || isLoading}>
               <PaperPlaneTilt
                 weight="fill"
                 size={32}
-                color={theme.colors.primary_600}
+                color={(!inputText.trim() && !audioPath) || isLoading 
+                  ? theme.colors.grey_400 
+                  : theme.colors.primary_600}
               />
             </TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>
+      
+      {/* Loading overlay */}
       {isLoading && (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary_600} />
@@ -567,6 +650,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.grey_100,
   },
   messageList: {
+    flex: 1,
+  },
+  messageListContent: {
     paddingHorizontal: 10,
     paddingBottom: 10,
   },
@@ -646,7 +732,6 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   audioPreview: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -657,12 +742,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   progressContainer: {
+    flex: 1,
     height: 10,
-    width: 'auto',
     backgroundColor: theme.colors.grey_300,
     borderRadius: 5,
     marginTop: 8,
     overflow: 'hidden',
+    position: 'relative',
   },
   progressBar: {
     height: '100%',
@@ -679,6 +765,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: theme.fonts.satoshi_bold,
     color: theme.colors.text_700,
+    textAlign: 'center',
   },
   loaderContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -695,11 +782,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: theme.fonts.satoshi_regular,
     color: theme.colors.white,
+    alignSelf: 'flex-end',
+    marginTop: 4,
   },
   otherUserTimeText: {
     fontSize: 10,
     fontFamily: theme.fonts.satoshi_regular,
     color: theme.colors.text_500,
+    alignSelf: 'flex-start',
+    marginTop: 4,
   },
   progressBackground: {
     position: 'absolute',
