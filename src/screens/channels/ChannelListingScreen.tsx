@@ -36,7 +36,6 @@ const ChannelListing: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await ChannelListingService.get_chat_listing_page(current_user!.id);
-      console.log("Channel Listing Data",data);
       setChannels(data);
     } catch (error:any) {
       Alert.alert(error);
