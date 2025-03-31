@@ -25,6 +25,7 @@ import { setUserContext, UserProvider, useUser } from './hooks/UserContext';
 import theme from '@utils/theme';
 import { User, UserMetadata, UserResponse } from '@supabase/supabase-js';
 import UserHoveringScreen from './screens/static/UserHoveringScreen';
+import { UserService } from '@utils/user_service';
 
 export type RootStackParamList = {
   Signup: undefined;
@@ -62,27 +63,12 @@ function AppContent(): React.JSX.Element {
   };
 
 
-  const transformUserContext = (user: User) => {
-    const metadata = user.user_metadata
-    return {
-      id: user.id!,
-      fullName: metadata.full_name!,
-      phone: user.phone!,
-      role: metadata.role!,
-      status: metadata.status,
-      gender: metadata.gender,
-      age: metadata.age,
-      dob: metadata.dob,
-      isAdmin: metadata.role === 'admin',
-    };
-  }
-
   const getCurrentUser = async () => {
     console.log("Getting current user");
     const user:UserResponse = await supabase.auth.getUser();
     if (!user.error) {
       console.log("User data", user.data);
-      const transformedUser = transformUserContext(user.data!.user);
+      const transformedUser = UserService.transformUserContext(user.data!.user);
       console.log("Transformed user", transformedUser);
       setUser(transformedUser);
     }

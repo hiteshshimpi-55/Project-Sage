@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import ChatListing from '../chats/ChatListing';
@@ -16,6 +16,9 @@ import {
 import {RootStackParamList} from 'src/App';
 import {useUser} from '@hooks/UserContext';
 import UserHoveringScreen from '../../screens/static/UserHoveringScreen';
+import { UserResponse } from '@supabase/supabase-js';
+import supabase from '../../core/supabase';
+import { UserService } from '@utils/user_service';
 
 export type BottomTabParamList = {
   ChatListing: undefined;
@@ -27,8 +30,27 @@ export type BottomTabParamList = {
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 const AppBar = () => {
+
+  const {setUser} = useUser();
+
+  const getCurrentUser = async () => {
+    console.log("Getting current user");
+    const user:UserResponse = await supabase.auth.getUser();
+    if (!user.error) {
+      const transformedUser = UserService.transformUserContext(user.data!.user);
+      setUser(transformedUser);
+    }
+  }
+
+  useEffect(() => {
+    getCurrentUser();
+  },[])
+  
+  
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+
 
   const onNotificationPressed = () => {
     console.log('Notification pressed');

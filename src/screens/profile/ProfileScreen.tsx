@@ -14,9 +14,11 @@ import { CommonActions, NavigationProp, useNavigation } from '@react-navigation/
 import { RootStackParamList } from '../../App';
 import theme from '../../utils/theme';
 import { SignOut } from 'phosphor-react-native';
+import { useUser } from '@hooks/UserContext';
 
 const ProfileScreen = () => {
   const [user, setUser] = useState<any>(null);
+  const {setUser:setUserContext} = useUser();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   useEffect(() => {
@@ -37,6 +39,7 @@ const ProfileScreen = () => {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
+      setUserContext(null);
       navigation.dispatch(
         CommonActions.reset({
           index: 0,

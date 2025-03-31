@@ -1,3 +1,4 @@
+import { User } from "@supabase/supabase-js";
 import supabase, { adminAuthClient } from "../core/supabase";
 
 export class UserService {
@@ -37,5 +38,20 @@ export class UserService {
       user_metadata: { role: 'admin' },
     });
     if (error) throw error;
+  }
+
+  public static transformUserContext(user: User): any {
+    const metadata = user.user_metadata
+    return {
+      id: user.id!,
+      fullName: metadata.full_name!,
+      phone: user.phone!,
+      role: metadata.role!,
+      status: metadata.status,
+      gender: metadata.gender,
+      age: metadata.age,
+      dob: metadata.dob,
+      isAdmin: metadata.role === 'admin',
+    };
   }
 }

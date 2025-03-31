@@ -109,13 +109,13 @@ const ChannelListing: React.FC = () => {
         </View>
       )}
 
-      <TouchableOpacity
+{current_user?.isAdmin &&    <TouchableOpacity
         style={[styles.floatingButton, isLoading && styles.disabledButton]}
         onPress={() => navigation.navigate('UserSelectionScreen')}
         disabled={isLoading}
       >
         <Plus size={24} color="#fff" />
-      </TouchableOpacity>
+      </TouchableOpacity>}
     </View>
   );
 };
