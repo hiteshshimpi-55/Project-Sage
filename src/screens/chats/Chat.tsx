@@ -13,6 +13,7 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
@@ -67,6 +68,18 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   const [currentPosition, setCurrentPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   
+
+
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
+
+  const handleImagePress = (imageUrl: string) => {
+    setExpandedImage(imageUrl);
+  };
+
+  const closeModal = () => {
+    setExpandedImage(null);
+  };
+
   // Initialize chat
   const initialize = useCallback(async () => {
     if (!userContext?.id) return;    
@@ -430,49 +443,73 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 
   // Memoized components
   const renderMessage = useCallback(({item}: {item: Message}) => {
-    console.log("Created By",item.created_by);
-    console.log("Current Chat User",currentChatUserId);
-    const isCurrentUser = item.created_by === currentChatUserId;
+
     const messageTime = new Date(item.created_at).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
     });
-
+  
+    const isCurrentUser = item.created_by === currentChatUserId;
+  
     return (
-      <TouchableOpacity onLongPress={() => handleLongPress(item.id)} activeOpacity={0.9}>
-        <View
-          style={[
-            styles.messageBubble,
-            isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
-          ]}>
-          {route.params.type === 'one-to-many' &&
-            !isCurrentUser &&
-            usernames[item.created_by] && (
-              <Text style={styles.username}>{usernames[item.created_by]}</Text>
+      <>
+        <TouchableOpacity
+          onLongPress={() => handleLongPress(item.id)}
+          activeOpacity={0.9}
+        >
+          <View
+            style={[
+              styles.messageBubble,
+              isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
+            ]}
+          >
+            {route.params.type === 'one-to-many' &&
+              !isCurrentUser &&
+              usernames[item.created_by] && (
+                <Text style={styles.username}>{usernames[item.created_by]}</Text>
+              )}
+  
+            {item.type === 'image' ? (
+              <TouchableOpacity onPress={() => handleImagePress(item.media_url)}>
+                <Image source={{ uri: item.media_url }} style={styles.imageMessage} />
+              </TouchableOpacity>
+            ) : item.type === 'audio' ? (
+              <AudioPlayer audioUrl={item.media_url} />
+            ) : (
+              <Text
+                style={[
+                  styles.messageText,
+                  isCurrentUser ? styles.currentUserText : styles.otherUserText,
+                ]}
+              >
+                {item.text}
+              </Text>
             )}
-          {item.type === 'image' ? (
-            <Image source={{uri: item.media_url}} style={styles.imageMessage} />
-          ) : item.type === 'audio' ? (
-            <AudioPlayer audioUrl={item.media_url} />
-          ) : (
+  
             <Text
-              style={[
-                styles.messageText,
-                isCurrentUser ? styles.currentUserText : styles.otherUserText,
-              ]}>
-              {item.text}
+              style={
+                isCurrentUser
+                  ? styles.currentUserTimeText
+                  : styles.otherUserTimeText
+              }
+            >
+              {messageTime}
             </Text>
-          )}
-          <Text
-            style={
-              isCurrentUser
-                ? styles.currentUserTimeText
-                : styles.otherUserTimeText
-            }>
-            {messageTime}
-          </Text>
-        </View>
-      </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+  
+        {/* Modal for Expanded Image */}
+        <Modal visible={!!expandedImage} transparent={true} animationType="fade">
+          <View style={styles.modalContainer}>
+            <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+            {expandedImage && (
+              <Image source={{ uri: expandedImage }} style={styles.expandedImage} />
+            )}
+          </View>
+        </Modal>
+      </>
     );
   }, [currentChatUserId, route.params.type, usernames, handleLongPress]);
 
@@ -802,6 +839,27 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: theme.colors.grey_400,
     borderRadius: 4,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  expandedImage: {
+    width: '90%',
+    height: '80%',
+    resizeMode: 'contain',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 1,
+  },
+  closeButtonText: {
+    fontSize: 28,
+    color: 'white',
   },
 });
 

@@ -7,21 +7,12 @@ import {
   StyleSheet,
   Image,
   TextInput,
-  Modal,
-  Alert,
 } from 'react-native';
-import {
-  NavigationProp,
-  useFocusEffect,
-  useNavigation,
-} from '@react-navigation/native';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
 
-import {ChatUser} from './service/chat_listing_service';
-import {RootStackParamList} from '../../App';
+import { ChatUser, ChatListingService } from './service/chat_listing_service';
 import theme from '@utils/theme';
-import {useUser} from '@hooks/UserContext';
-import {ChatListingService} from './service/chat_listing_service';
-
+import { useUser } from '@hooks/UserContext';
 
 const formatTime = (timestamp: string) => {
   const date = new Date(timestamp);
@@ -29,26 +20,30 @@ const formatTime = (timestamp: string) => {
 };
 
 const ChatListing: React.FC = () => {
-  const {user: currentUser} = useUser();
+  const { user: currentUser } = useUser();
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NavigationProp<any>>();
 
   useEffect(() => {
+    // Initial load
     loadUsers();
-  }, []);
 
-  useFocusEffect(
-    useCallback(() => {
+    // ✅ Polling every 5 seconds
+    const intervalId = setInterval(() => {
+      console.log('Polling for new chat data...');
       loadUsers();
-    }, []),
-  );
+    }, 5000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
+  }, []);
 
   const loadUsers = async () => {
     try {
       const data = await ChatListingService.get_chat_listing_page(
         currentUser?.id!,
-        currentUser?.isAdmin!,
+        currentUser?.isAdmin!
       );
       console.log('Data:', data);
       setUsers(data);
@@ -57,15 +52,12 @@ const ChatListing: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const fullName = user.name!.toLowerCase();
+  const filteredUsers = users.filter((user) => {
+    const fullName = user.name?.toLowerCase() || '';
     return fullName.includes(searchQuery.toLowerCase());
   });
 
-
-
-  const renderUser = ({ item }: { item: ChatUser })=>{
-
+  const renderUser = ({ item }: { item: ChatUser }) => {
     const getMessagePreview = () => {
       switch (item.last_message_type) {
         case 'image':
@@ -83,39 +75,39 @@ const ChatListing: React.FC = () => {
       }
     };
 
-    return (<TouchableOpacity
-      style={styles.userItem}
-      onPress={() => {
+    return (
+      <TouchableOpacity
+        style={styles.userItem}
+        onPress={() => {
           navigation.navigate('ChatScreen', {
             id: item.user_id!,
             type: item.chat_type!,
             name: item.name!,
-          });      }}
-    >
-      <Image
-        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name ?? "")}&background=random` }}
-        style={styles.profilePic}
-      />
+          });
+        }}
+      >
+        <Image source={{ uri: 'https://picsum.photos/200/300' }} style={styles.profilePic} />
 
-      <View style={styles.textContainer}>
-        <Text style={styles.userName}>{item.name}</Text>
-        <Text style={styles.latestMessage} numberOfLines={1}>
-          {getMessagePreview()}
-        </Text>
-      </View>
+        <View style={styles.textContainer}>
+          <Text style={styles.userName}>{item.name}</Text>
+          <Text style={styles.latestMessage} numberOfLines={1}>
+            {getMessagePreview()}
+          </Text>
+        </View>
 
-      <View style={styles.metaContainer}>
-        <Text style={styles.messageTime}>
-          {item.last_message_time ? formatTime(item.last_message_time) : ''}
-        </Text>
-        {item.unread_message_count! > 0 && (
-          <View style={styles.unreadBadge}>
-            <Text style={styles.unreadCountText}>{item.unread_message_count}</Text>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>);
-  }
+        <View style={styles.metaContainer}>
+          <Text style={styles.messageTime}>
+            {item.last_message_time ? formatTime(item.last_message_time) : ''}
+          </Text>
+          {item.unread_message_count! > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadCountText}>{item.unread_message_count}</Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -132,7 +124,7 @@ const ChatListing: React.FC = () => {
       <FlatList
         data={filteredUsers}
         renderItem={renderUser}
-        keyExtractor={item => item.chat_id ?? item.user_id}
+        keyExtractor={(item) => item.chat_id ?? item.user_id}
         contentContainerStyle={styles.listContainer}
       />
     </View>
@@ -175,7 +167,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginRight: 16,
   },
-  userInfo: {
+  textContainer: {
     flex: 1,
   },
   userName: {
@@ -208,9 +200,6 @@ const styles = StyleSheet.create({
   messageTime: {
     fontSize: 12,
     color: '#888',
-  },
-  textContainer: {
-    flex: 1,
   },
 });
 

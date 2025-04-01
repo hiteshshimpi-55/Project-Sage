@@ -1,20 +1,20 @@
 import React, { useEffect } from 'react';
-import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import ChatListing from '../chats/ChatListing';
 import CalendarScreen from '../calendar/CalendarScreen';
 import ProfileScreen from '../profile/ProfileScreen';
 import ChannelListing from '../channels/ChannelListingScreen';
 import BottomBar from '../../components/molecules/BottomBar';
-import {useNavigation, useNavigationState} from '@react-navigation/native';
-import {Bell, LinkSimpleHorizontal} from 'phosphor-react-native';
+import { useNavigation, useNavigationState } from '@react-navigation/native';
+import { Bell, LinkSimpleHorizontal } from 'phosphor-react-native';
 import theme from '@utils/theme';
 import {
   createNativeStackNavigator,
   NativeStackNavigationProp,
 } from '@react-navigation/native-stack';
-import {RootStackParamList} from 'src/App';
-import {useUser} from '@hooks/UserContext';
+import { RootStackParamList } from 'src/App';
+import { useUser } from '@hooks/UserContext';
 import UserHoveringScreen from '../../screens/static/UserHoveringScreen';
 import { UserResponse } from '@supabase/supabase-js';
 import supabase from '../../core/supabase';
@@ -31,11 +31,11 @@ const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 const AppBar = () => {
 
-  const {setUser} = useUser();
+  const { user: userContext, setUser } = useUser();
 
   const getCurrentUser = async () => {
     console.log("Getting current user");
-    const user:UserResponse = await supabase.auth.getUser();
+    const user: UserResponse = await supabase.auth.getUser();
     if (!user.error) {
       const transformedUser = UserService.transformUserContext(user.data!.user);
       setUser(transformedUser);
@@ -44,9 +44,9 @@ const AppBar = () => {
 
   useEffect(() => {
     getCurrentUser();
-  },[])
-  
-  
+  }, [])
+
+
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -65,33 +65,35 @@ const AppBar = () => {
     <View style={styles.appBar}>
       <Text style={styles.appBarText}>SAGE</Text>
 
-      <View style={styles.rightButtons}>
-        <TouchableOpacity
-          style={styles.appBarButton}
-          onPress={onNotificationPressed}>
-          <Bell size={24} color="#333" />
-        </TouchableOpacity>
+      {userContext?.isAdmin && (<View style={styles.rightButtons}>
+        
+          <TouchableOpacity
+            style={styles.appBarButton}
+            onPress={onNotificationPressed}>
+            <Bell size={24} color="#333" />
+          </TouchableOpacity>
+        
         <TouchableOpacity style={styles.appBarButton} onPress={onLinkPressed}>
           <LinkSimpleHorizontal size={24} color="#333" />
         </TouchableOpacity>
-      </View>
+      </View>)}
     </View>
   );
 };
 
 const Home = () => {
-  const {user: currentUser} = useUser();
+  const { user: currentUser } = useUser();
 
   return (
-    <View style={{flex: 1}}>
+    <View style={{ flex: 1 }}>
       {/* Render the custom AppBar */}
       <AppBar />
       <Tab.Navigator
         tabBar={props => <BottomBar {...props} />}
-        screenOptions={{headerShown: false}}>
-        <Tab.Screen name="ChatListing" component={currentUser?.status === 'active'?ChatListing:UserHoveringScreen} />
-        <Tab.Screen name="ChannelsListing" component={currentUser?.status === 'active'?ChannelListing:UserHoveringScreen} />
-        <Tab.Screen name="CalendarScreen" component={currentUser?.status === 'active'?CalendarScreen:UserHoveringScreen} />
+        screenOptions={{ headerShown: false }}>
+        <Tab.Screen name="ChatListing" component={currentUser?.status === 'active' ? ChatListing : UserHoveringScreen} />
+        <Tab.Screen name="ChannelsListing" component={currentUser?.status === 'active' ? ChannelListing : UserHoveringScreen} />
+        <Tab.Screen name="CalendarScreen" component={currentUser?.status === 'active' ? CalendarScreen : UserHoveringScreen} />
         <Tab.Screen name="ProfileScreen" component={ProfileScreen} />
       </Tab.Navigator>
     </View>
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     elevation: 4,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
   },

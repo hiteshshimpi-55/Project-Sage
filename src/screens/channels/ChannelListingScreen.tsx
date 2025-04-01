@@ -57,7 +57,7 @@ const ChannelListing: React.FC = () => {
       }}
     >
       <Image
-        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name ?? "")}&background=random` }}
+        source={{ uri: "https://picsum.photos/200/300" }}
         style={styles.channelImage}
       />
 
