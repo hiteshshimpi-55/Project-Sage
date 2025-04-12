@@ -61,10 +61,16 @@ const AppBar = () => {
     console.log('Link pressed');
     navigation.navigate('MeetLink');
   };
+  const OnAboutUsPressed= () => {
+    console.log("About Us pressed");
+    navigation.navigate("AboutUs");
+  }
   return (
     <View style={styles.appBar}>
       <Text style={styles.appBarText}>SAGE</Text>
-
+      <TouchableOpacity style={styles.appBarButton} onPress={OnAboutUsPressed}>
+          <Text>About Us</Text>
+        </TouchableOpacity>
       {userContext?.isAdmin && (<View style={styles.rightButtons}>
         
           <TouchableOpacity

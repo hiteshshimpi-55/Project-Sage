@@ -26,6 +26,7 @@ import theme from '@utils/theme';
 import { User, UserMetadata, UserResponse } from '@supabase/supabase-js';
 import UserHoveringScreen from './screens/static/UserHoveringScreen';
 import { UserService } from '@utils/user_service';
+import AboutUsScreen from './screens/admin/AboutUs';
 
 export type RootStackParamList = {
   Signup: undefined;
@@ -42,6 +43,7 @@ export type RootStackParamList = {
   ChannelDetailsScreen: {
     selectedUsers: string[];
   };
+  AboutUs: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -98,6 +100,7 @@ function AppContent(): React.JSX.Element {
             <Stack.Screen name="ChannelDetailsScreen" component={ChannelDetailsScreen} options={{ headerShown: true }}/>
             <Stack.Screen name="UserSelectionScreen" component={UserSelectionScreen} options={{ headerShown: true }}/>
             <Stack.Screen name="MeetLink" component={AdminMeeting} />
+            <Stack.Screen name="AboutUs" component={AboutUsScreen} options={{ headerShown: true }}/>
 
             {/* Main App with Tabs */}
             <Stack.Screen

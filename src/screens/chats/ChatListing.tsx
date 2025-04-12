@@ -45,7 +45,6 @@ const ChatListing: React.FC = () => {
         currentUser?.id!,
         currentUser?.isAdmin!
       );
-      console.log('Data:', data);
       setUsers(data);
     } catch (error) {
       console.error('Error loading users:', error);
