@@ -121,7 +121,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         .select('*')
         .eq('chat_id', currentChatId)
         .order('created_at', {ascending: false})
-        .limit(50);
+        .limit(20);
 
       if (error) {
         console.error('Error fetching messages:', error);
@@ -164,6 +164,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         },
         payload => {
           const newMessage = payload.new as Message;
+          console.log('New message received:', newMessage);
           setMessages(prevMessages => [newMessage, ...prevMessages]);
         },
       )
@@ -180,10 +181,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   }, [initialize]);
 
   useEffect(() => {
-    if (currentChatId) {
-      fetchMessages();
-      fetchAndSetUsernames();
-    }
+    if (!currentChatId) return;
+  
+    const loadChatData = async () => {
+      await Promise.all([
+        fetchMessages(),
+        fetchAndSetUsernames(),
+      ]);
+    };
+  
+    loadChatData();
   }, [currentChatId, fetchMessages, fetchAndSetUsernames]);
 
   // Message functions
@@ -205,6 +212,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         );
         setInputText('');
       }
+
+      await ChatServiceV2.markAsRead(currentChatUserId!);
     } catch (error) {
       console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message');
@@ -233,6 +242,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         currentChatUserId,
         imageUri,
       );
+
+      await ChatServiceV2.markAsRead(currentChatUserId!);
     } catch (error) {
       console.error('Error sending image:', error);
       Alert.alert('Error', 'Failed to send image');

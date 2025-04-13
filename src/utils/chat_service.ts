@@ -577,12 +577,12 @@ export class ChatService {
     }
   }
 
-  static async sendTextMessage(chatId: string, userId: string, text: string) {
+  static async sendTextMessage(chatId: string, chatUserId: string, text: string) {
     try {
-      console.log('Sending text message:', chatId, userId, text);
+      console.log('Sending text message:', chatId, chatUserId, text);
       const message = {
         chat_id: chatId,
-        created_by: userId,
+        created_by: chatUserId,
         type: 'text',
         text: text,
         media_url: '',
