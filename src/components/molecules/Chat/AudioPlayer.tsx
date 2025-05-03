@@ -46,12 +46,12 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl }) => {
     }
   };
 
-  const formatTime = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
+  // const formatTime = (ms: number) => {
+  //   const totalSeconds = Math.floor(ms / 1000);
+  //   const minutes = Math.floor(totalSeconds / 60);
+  //   const seconds = totalSeconds % 60;
+  //   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  // };
 
   return (
     <View style={styles.audioContainer}>
@@ -71,9 +71,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl }) => {
           ]}
         />
       </View>
-      <Text style={styles.timeText}>
+      {/* <Text style={styles.timeText}>
         {formatTime(currentPosition)} / {formatTime(duration)}
-      </Text>
+      </Text> */}
     </View>
   );
 };

@@ -647,6 +647,7 @@ export class ChatService {
         throw new Error(`Failed to upload audio: ${error.message}`);
       }
 
+      console.log('Audio uploaded successfully:', data);
       // Step 3: Get the public URL of the uploaded audio
       const { data: publicUrlData } = supabase.storage.from('voice_messages').getPublicUrl(filePath);
       const audioUrl = publicUrlData.publicUrl;
@@ -673,6 +674,4 @@ export class ChatService {
       throw error;
     }
   }
-
-
 }

@@ -14,6 +14,8 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Animated,
+  Easing,
 } from 'react-native';
 import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
@@ -33,8 +35,9 @@ import {
   CaretLeft,
   Image as ImageIcon,
   Info,
+  X,
 } from 'phosphor-react-native';
-import {useNavigation,NavigationProp} from '@react-navigation/native';
+import {useNavigation, NavigationProp} from '@react-navigation/native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import AudioPlayer from '@components/molecules/Chat/AudioPlayer';
 import {useUser} from '@hooks/UserContext';
@@ -50,8 +53,11 @@ interface ChatScreenProps {
 
 const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-
   const {user: userContext} = useUser();
+  
+  // Animation values
+  const pulseAnimation = useState(new Animated.Value(1))[0];
+  const inputWidthAnimation = useState(new Animated.Value(1))[0];
   
   // State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -69,10 +75,53 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [showRecordingControls, setShowRecordingControls] = useState(false);
   
-
-
+  // Image states
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isRecording) {
+      // Start the pulse animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnimation, {
+            toValue: 1.2,
+            duration: 800,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnimation, {
+            toValue: 1,
+            duration: 800,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+      
+      // Shrink the input
+      Animated.timing(inputWidthAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      // Stop the pulse animation
+      Animated.timing(pulseAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      
+      // Expand the input back
+      Animated.timing(inputWidthAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [isRecording, pulseAnimation, inputWidthAnimation]);
 
   const handleImagePress = (imageUrl: string) => {
     setExpandedImage(imageUrl);
@@ -86,11 +135,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   const initialize = useCallback(async () => {
     if (!userContext?.id) return;    
     try {
-
       let chat_id:any = null;
       if (route.params.type === 'one-to-many') {
         chat_id = route.params.id;
-      }else{
+      } else {
         chat_id = await ChatServiceV2.get_or_create_chat(
           userContext.id,
           route.params.id
@@ -101,10 +149,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         chat_id,
       );
 
-      if (chat_user_id === null ){
+      if (chat_user_id === null) {
         throw new Error('Chat User ID not found');
       }
-      console.log("Chat ID",chat_id,chat_user_id);
+      console.log("Chat ID", chat_id, chat_user_id);
       setCurrentChatId(chat_id);
       setCurrentChatUserId(chat_user_id);
       await ChatServiceV2.markAsRead(chat_user_id!);
@@ -197,9 +245,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 
   // Message functions
   const handleSend = async () => {
-
-    console.log("handleSend",currentChatId,currentChatUserId,inputText.trim());
-
     if (!currentChatId || !currentChatUserId) return;
     try {
       setIsLoading(true);
@@ -287,39 +332,40 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   };
 
   // Audio recording functions
-  const requestPermission = async () => {
-    if (Platform.OS === 'android') {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        {
-          title: 'Microphone Permission',
-          message: 'This app needs access to your microphone to record audio.',
-          buttonPositive: 'OK',
-        },
-      );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
-    } else {
-      const permission = PERMISSIONS.IOS.MICROPHONE;
-      const status = await check(permission);
+  // const requestPermission = async () => {
+  //   if (Platform.OS === 'android') {
+  //     const granted = await PermissionsAndroid.request(
+  //       PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+  //       {
+  //         title: 'Microphone Permission',
+  //         message: 'This app needs access to your microphone to record audio.',
+  //         buttonPositive: 'OK',
+  //       },
+  //     );
+  //     return granted === PermissionsAndroid.RESULTS.GRANTED;
+  //   } else {
+  //     const permission = PERMISSIONS.IOS.MICROPHONE;
+  //     const status = await check(permission);
 
-      if (status === RESULTS.GRANTED) {
-        return true;
-      } else {
-        const newStatus = await request(permission);
-        return newStatus === RESULTS.GRANTED;
-      }
-    }
-  };
+  //     if (status === RESULTS.GRANTED) {
+  //       return true;
+  //     } else {
+  //       const newStatus = await request(permission);
+  //       return newStatus === RESULTS.GRANTED;
+  //     }
+  //   }
+  // };
 
   const startRecording = async () => {
     try {
-      const hasPermission = await requestPermission();
-      if (!hasPermission) {
-        Alert.alert('Permission Denied', 'Microphone permission is required for recording audio.');
-        return;
-      }
+      // // const hasPermission = await requestPermission();
+      // if (!hasPermission) {
+      //   Alert.alert('Permission Denied', 'Microphone permission is required for recording audio.');
+      //   return;
+      // }
 
       setIsRecording(true);
+      setShowRecordingControls(true);
       const path = await audioRecorderPlayer.startRecorder();
       setAudioPath(path);
       
@@ -343,6 +389,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     } catch (error) {
       console.error('Error starting recording:', error);
       setIsRecording(false);
+      setShowRecordingControls(false);
       Alert.alert('Error', 'Failed to start recording');
     }
   };
@@ -354,6 +401,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
       const path = await audioRecorderPlayer.stopRecorder();
       setAudioPath(path);
       setIsRecording(false);
+      // Keep showing recording controls until audio is sent or deleted
     } catch (error) {
       console.error('Error stopping recording:', error);
       setIsRecording(false);
@@ -412,6 +460,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     setIsPlaying(false);
     setCurrentPosition(0);
     setDuration(0);
+    setShowRecordingControls(false);
   };
 
   const togglePlayback = async () => {
@@ -439,6 +488,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         audioPath,
       );
       deleteRecording();
+      setShowRecordingControls(false);
     } catch (error) {
       console.error('Error sending audio:', error);
       Alert.alert('Error', 'Failed to send audio message');
@@ -456,7 +506,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 
   // Memoized components
   const renderMessage = useCallback(({item}: {item: Message}) => {
-
     const messageTime = new Date(item.created_at).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
@@ -526,71 +575,67 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     );
   }, [currentChatUserId, route.params.type, usernames, handleLongPress]);
 
-  // Input area rendering based on state
-  const renderInputArea = useMemo(() => {
-    if (isRecording) {
-      return (
-        <Text style={styles.recordingText}>
-          🎙️ Recording... {recordingDuration}
-        </Text>
-      );
-    } else if (audioPath) {
-      return (
-        <View style={styles.audioPreview}>
-          <TouchableOpacity onPress={togglePlayback}>
-            {isPlaying ? (
-              <Pause weight="fill" size={24} color={theme.colors.primary_400} />
-            ) : (
-              <Play weight="fill" size={24} color={theme.colors.primary_400} />
-            )}
-          </TouchableOpacity>
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBackground} />
-            <View
+  // Rendering the recording UI
+  const renderRecordingUI = () => {
+    if (!showRecordingControls) return null;
+
+    return (
+      <View style={styles.recordingContainer}>
+        {isRecording ? (
+          // Recording in progress UI
+          <>
+            <Animated.View 
               style={[
-                styles.progressBar,
-                {
-                  width: duration
-                    ? `${(currentPosition / duration) * 100}%`
-                    : '0%',
-                },
+                styles.recordingIndicator,
+                { transform: [{ scale: pulseAnimation }] }
               ]}
             />
-            <Text style={styles.progressText}>
-              {new Date(currentPosition).toISOString().substr(14, 5)} /{' '}
-              {new Date(duration).toISOString().substr(14, 5)}
-            </Text>
+            <View style={styles.recordingTextContainer}>
+              <Text style={styles.recordingText}>Recording {recordingDuration}</Text>
+              <Text style={styles.recordingHint}>Tap to stop</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.stopRecordingButton}
+              onPress={stopRecording}
+            >
+              <Stop weight="fill" size={24} color={theme.colors.white} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          // Recording preview UI
+          <View style={styles.audioPreview}>
+            <TouchableOpacity onPress={togglePlayback}>
+              {isPlaying ? (
+                <Pause weight="fill" size={24} color={theme.colors.primary_400} />
+              ) : (
+                <Play weight="fill" size={24} color={theme.colors.primary_400} />
+              )}
+            </TouchableOpacity>
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBackground} />
+              <View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: duration
+                      ? `${(currentPosition / duration) * 100}%`
+                      : '0%',
+                  },
+                ]}
+              />
+              <Text style={styles.progressText}>
+                {new Date(currentPosition).toISOString().substr(14, 5)} /{' '}
+                {new Date(duration).toISOString().substr(14, 5)}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.deleteRecordingButton} onPress={deleteRecording}>
+              <X size={20} color={theme.colors.secondary} />
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity onPress={deleteRecording}>
-            <Trash size={24} color={theme.colors.secondary} />
-          </TouchableOpacity>
-        </View>
-      );
-    } else {
-      return (
-        <TextInput
-          style={styles.input}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Type a message..."
-          multiline
-          returnKeyType="send"
-          onSubmitEditing={handleSend}
-        />
-      );
-    }
-  }, [
-    isRecording, 
-    recordingDuration, 
-    audioPath, 
-    togglePlayback, 
-    isPlaying, 
-    currentPosition, 
-    duration, 
-    deleteRecording, 
-    inputText
-  ]);
+        )}
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -606,7 +651,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
           style={styles.profileImage}
         />
         <Text style={styles.appBarText}>{chatUserName}</Text>
-        {currentChatId && route.params.type  === 'one-to-many' && (
+        {currentChatId && route.params.type === 'one-to-many' && (
           <TouchableOpacity
             onPress={() => navigation.navigate('ChannelDetailsScreen', { id: currentChatId })}
             style={styles.infoButton}>
@@ -632,40 +677,58 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         
         {/* Input area */}
         <View style={styles.inputContainer}>
-          <TouchableOpacity
-            onPress={handleImagePicker}
-            style={styles.imageButton}>
-            <ImageIcon size={24} color={theme.colors.primary_600} />
-          </TouchableOpacity>
+          {!showRecordingControls && (
+            <TouchableOpacity
+              onPress={handleImagePicker}
+              style={styles.imageButton}>
+              <ImageIcon size={24} color={theme.colors.primary_600} />
+            </TouchableOpacity>
+          )}
 
-          <View style={styles.inputWrapper}>
-            {renderInputArea}
-          </View>
+          {/* Animated container for input or recording */}
+          <Animated.View style={[
+            styles.inputWrapper,
+            { flex: showRecordingControls ? 1 : inputWidthAnimation }
+          ]}>
+            {showRecordingControls ? (
+              renderRecordingUI()
+            ) : (
+              <TextInput
+                style={styles.input}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Type a message..."
+                multiline
+                returnKeyType="send"
+                onSubmitEditing={handleSend}
+                editable={!isRecording}
+              />
+            )}
+          </Animated.View>
 
           <View style={styles.rightButtons}>
-            {!audioPath && !isPlaying && (
+            {!showRecordingControls && (
               <TouchableOpacity
-                onPress={isRecording ? stopRecording : startRecording}
+                onPress={startRecording}
                 style={styles.recordButton}>
-                {isRecording ? (
-                  <Stop size={24} weight="fill" color={theme.colors.primary_600} />
-                ) : (
-                  <Microphone size={24} color={theme.colors.primary_600} />
-                )}
+                <Microphone size={24} color={theme.colors.primary_600} />
               </TouchableOpacity>
             )}
-            <TouchableOpacity 
-              style={styles.sendButton} 
-              onPress={handleSend}
-              disabled={(!inputText.trim() && !audioPath) || isLoading}>
-              <PaperPlaneTilt
-                weight="fill"
-                size={32}
-                color={(!inputText.trim() && !audioPath) || isLoading 
-                  ? theme.colors.grey_400 
-                  : theme.colors.primary_600}
-              />
-            </TouchableOpacity>
+            
+            {(!isRecording && (inputText.trim() || audioPath)) && (
+              <TouchableOpacity 
+                style={styles.sendButton} 
+                onPress={handleSend}
+                disabled={isLoading}>
+                <PaperPlaneTilt
+                  weight="fill"
+                  size={32}
+                  color={isLoading 
+                    ? theme.colors.grey_400 
+                    : theme.colors.primary_600}
+                />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -792,22 +855,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 8,
   },
+  recordingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.grey_300,
+    borderRadius: 20,
+    padding: 10,
+    height: 56,
+  },
+  recordingIndicator: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: theme.colors.secondary,
+    marginRight: 10,
+  },
+  recordingTextContainer: {
+    flex: 1,
+  },
+  recordingText: {
+    fontSize: 16,
+    fontFamily: theme.fonts.satoshi_medium,
+    color: theme.colors.text_700,
+  },
+  recordingHint: {
+    fontSize: 12,
+    fontFamily: theme.fonts.satoshi_regular,
+    color: theme.colors.text_500,
+    marginTop: 2,
+  },
+  stopRecordingButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   audioPreview: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     width: '100%',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: theme.colors.grey_300,
-    borderRadius: 20,
   },
   progressContainer: {
     flex: 1,
     height: 10,
     backgroundColor: theme.colors.grey_300,
     borderRadius: 5,
-    marginTop: 8,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -822,11 +917,13 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.satoshi_regular,
     color: theme.colors.primary_400,
   },
-  recordingText: {
-    fontSize: 18,
-    fontFamily: theme.fonts.satoshi_bold,
-    color: theme.colors.text_700,
-    textAlign: 'center',
+  deleteRecordingButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.grey_400,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loaderContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -886,7 +983,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     justifyContent: 'center',
   },
-  
 });
 
 export default ChatScreen;
