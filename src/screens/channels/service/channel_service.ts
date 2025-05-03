@@ -44,6 +44,29 @@ export class ChannelListingService {
     return channels;
   }
 
+  public static async get_channel_details(channel_id: string) {
+    const { data, error } = await supabase
+      .from('chat')
+      .select('*, chat_user(user_id)')
+      .eq('id', channel_id)
+      .single();
+
+    if (error) {
+      console.error('Error loading channel details:', error);
+      throw error;
+    } else {
+      console.log('Channel details:', data);
+      const chatName = data.name;
+      const userIds = data.chat_user.map((u: any) => u.user_id);
+      return {
+        name: chatName,
+        userIds: userIds,
+      }
+    }
+  }
+
+  
+
   public static async get_all_users(current_user_id: string) {
     const { data, error } = await adminAuthClient.listUsers();
     if (error) {

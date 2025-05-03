@@ -32,8 +32,9 @@ import {
   Stop,
   CaretLeft,
   Image as ImageIcon,
+  Info,
 } from 'phosphor-react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation,NavigationProp} from '@react-navigation/native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import AudioPlayer from '@components/molecules/Chat/AudioPlayer';
 import {useUser} from '@hooks/UserContext';
@@ -48,7 +49,8 @@ interface ChatScreenProps {
 }
 
 const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
   const {user: userContext} = useUser();
   
   // State
@@ -604,6 +606,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
           style={styles.profileImage}
         />
         <Text style={styles.appBarText}>{chatUserName}</Text>
+        {currentChatId && route.params.type  === 'one-to-many' && (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ChannelDetailsScreen', { id: currentChatId })}
+            style={styles.infoButton}>
+            <Info size={24} color={theme.colors.text_700} />
+          </TouchableOpacity>
+        )}
       </View>
       <View style={styles.divider} />
       
@@ -872,6 +881,12 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: 'white',
   },
+  infoButton: {
+    marginLeft: 'auto',
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  
 });
 
 export default ChatScreen;

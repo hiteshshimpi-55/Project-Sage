@@ -16,7 +16,6 @@ import ChatScreen from './screens/chats/Chat';
 import AdminDashboard from './screens/admin/AdminDashboard';
 import AdminMeeting from './screens/admin/AdminMeet';
 import Home from './screens/home/Home';
-import UserSelectionScreen from './screens/channels/UserSelectionScreen';
 import ChannelDetailsScreen from './screens/channels/ChannelDetail';
 
 
@@ -41,7 +40,7 @@ export type RootStackParamList = {
   MeetLink: undefined;
   UserSelectionScreen: undefined;
   ChannelDetailsScreen: {
-    selectedUsers: string[];
+    id: string | null;
   };
   AboutUs: undefined;
 };
@@ -98,7 +97,6 @@ function AppContent(): React.JSX.Element {
             <Stack.Screen name="AdminDashboard" component={AdminDashboard}/>
             <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ headerShown: false }}/>
             <Stack.Screen name="ChannelDetailsScreen" component={ChannelDetailsScreen} options={{ headerShown: true }}/>
-            <Stack.Screen name="UserSelectionScreen" component={UserSelectionScreen} options={{ headerShown: true }}/>
             <Stack.Screen name="MeetLink" component={AdminMeeting} />
             <Stack.Screen name="AboutUs" component={AboutUsScreen} options={{ headerShown: true }}/>
 

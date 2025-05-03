@@ -398,6 +398,30 @@ export class ChatService {
     }
   }
 
+
+  static async updateGroup(channel_id:string,createdBy: string, groupName: string, userIds: string[]): Promise<string> {
+    try {
+      console.log("Updating group with users:", createdBy, groupName, userIds);
+      const final_user_ids = [...userIds]
+      const { data, error } = await supabase.rpc('update_channel', {
+        p_chat_id: channel_id,
+        p_created_by: createdBy,
+        p_group_name: groupName,
+        p_user_ids: final_user_ids,
+      });
+
+      if (error) {
+        console.error("Error creating group with users:", error);
+        throw new Error(error.message);
+      }
+      console.log("Group created successfully:", data);
+      return data;
+    } catch (error) {
+      console.error("Error creating group with users:", error);
+      throw error;
+    }
+  }
+
   static async markAsRead(chatId: string, userId: string) {
     try {
       const now = new Date().toISOString();

@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -19,37 +19,50 @@ const formatTime = (timestamp: string) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+const PAGE_SIZE = 20;
+
 const ChatListing: React.FC = () => {
   const { user: currentUser } = useUser();
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const navigation = useNavigation<NavigationProp<any>>();
 
-  useEffect(() => {
-    // Initial load
-    loadUsers();
-
-    // ✅ Polling every 5 seconds
-    const intervalId = setInterval(() => {
-      console.log('Polling for new chat data...');
-      loadUsers();
-    }, 5000);
-
-    // Cleanup interval on component unmount
-    return () => clearInterval(intervalId);
-  }, []);
-
-  const loadUsers = async () => {
+  const loadUsers = async (isInitial = false) => {
     try {
+      const offset = isInitial ? 0 : page * PAGE_SIZE;
       const data = await ChatListingService.get_chat_listing_page(
         currentUser?.id!,
-        currentUser?.isAdmin!
+        currentUser?.isAdmin!,
+        PAGE_SIZE,
+        offset
       );
-      setUsers(data);
+
+      if (isInitial) {
+        setUsers(data);
+        setPage(1);
+      } else {
+        setUsers(prev => [...prev, ...data]);
+        setPage(prev => prev + 1);
+      }
+
+      setHasMore(data.length === PAGE_SIZE);
     } catch (error) {
       console.error('Error loading users:', error);
     }
   };
+
+  useEffect(() => {
+    loadUsers(true);
+
+    const intervalId = setInterval(() => {
+      console.log('Polling for new chat data...');
+      loadUsers(true); // refresh all data
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   const filteredUsers = users.filter((user) => {
     const fullName = user.name?.toLowerCase() || '';
@@ -125,6 +138,10 @@ const ChatListing: React.FC = () => {
         renderItem={renderUser}
         keyExtractor={(item) => item.chat_id ?? item.user_id}
         contentContainerStyle={styles.listContainer}
+        onEndReached={() => {
+          if (hasMore) loadUsers();
+        }}
+        onEndReachedThreshold={0.5}
       />
     </View>
   );

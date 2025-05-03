@@ -111,7 +111,7 @@ const ChannelListing: React.FC = () => {
 
 {current_user?.isAdmin &&    <TouchableOpacity
         style={[styles.floatingButton, isLoading && styles.disabledButton]}
-        onPress={() => navigation.navigate('UserSelectionScreen')}
+        onPress={() => navigation.navigate('ChannelDetailsScreen', { id: null })}
         disabled={isLoading}
       >
         <Plus size={24} color="#fff" />
