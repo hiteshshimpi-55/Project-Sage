@@ -79,6 +79,8 @@ const ProfileScreen = () => {
           <InfoItem label="Member Since" value={new Date(user.created_at).toLocaleDateString()} />
           <InfoItem label="Age" value={user.user_metadata?.age ?? 'N/A'} />
           <InfoItem label="Gender" value={user.user_metadata?.gender ?? 'N/A'} />
+          <InfoItem label="Date of Birth" value={user.user_metadata?.dob ?? 'N/A'} />
+          <InfoItem label="Disease" value={user.user_metadata?.disease ?? 'N/A'} />
         </Section>
       </View>
 

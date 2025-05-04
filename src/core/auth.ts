@@ -1,3 +1,4 @@
+import { Placeholder } from 'phosphor-react-native';
 import supabase from './supabase';
 
 interface AuthResponse {
@@ -11,10 +12,12 @@ interface SignUpOptions {
   password: string;
   gender?: string;
   age?: number;
-  dob?: string; // Use string for date in YYYY-MM-DD format
+  dob?: string;
+  disease?: string;
+  place?: string; // Use string for date in YYYY-MM-DD format
 }
 
-export const signUp = async ({ phone, password, fullName, gender, age, dob }: SignUpOptions): Promise<AuthResponse> => {
+export const signUp = async ({ phone, password, fullName, gender, age, dob,disease,place }: SignUpOptions): Promise<AuthResponse> => {
   try {
     const { data, error } = await supabase.auth.signUp({
       phone: `+91${phone}`,
@@ -27,6 +30,8 @@ export const signUp = async ({ phone, password, fullName, gender, age, dob }: Si
           gender: gender || null,
           age: age || null,
           dob: dob || null,
+          disease: disease || null,
+          place: place || null,
         },
       },
     });

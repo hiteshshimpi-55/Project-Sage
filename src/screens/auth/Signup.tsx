@@ -15,13 +15,15 @@ const Signup: React.FC = () => {
   const [gender, setGender] = useState<string>('');
   const [age, setAge] = useState<string>('');
   const [dob, setDob] = useState<string>('');
+  const [place, setPlace] = useState<string>('');
+  const [disease, setDisease] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleSignup = async () => {
     try {
-      if (!fullName || !phone || !password || !gender || !age || !dob) {
+      if (!fullName || !phone || !password || !gender || !age || !place || !disease) {
         Alert.alert('Error', 'Please fill all the required fields.');
         return;
       }
@@ -34,12 +36,14 @@ const Signup: React.FC = () => {
         gender: gender || undefined,
         age: age ? parseInt(age, 10) : undefined,
         dob: dob || undefined,
+        disease: disease || undefined,
+        place: place || undefined,
       });
       setLoading(false);
 
       if (error) {
         console.error('Error inserting into custom_users:', error);
-        Alert.alert('Error', 'Failed to save user details.');
+        Alert.alert('Error', error.message);
       } else {
         Alert.alert('Success', 'User details saved successfully!');
         navigation.navigate('Home');
@@ -57,8 +61,7 @@ const Signup: React.FC = () => {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.welcomeText}>Create Account</Text>
-          <Text style={styles.subtitle}>Sign up to get started</Text>
+          <Text style={styles.welcomeText}>Sign up to get started</Text>
         </View>
 
         <View style={styles.formContainer}>
@@ -89,8 +92,9 @@ const Signup: React.FC = () => {
             options={[
               { label: 'Male', value: 'Male' },
               { label: 'Female', value: 'Female' },
+              { label: 'Other', value: 'Other' },
             ]}
-            placeholder="Select your gender (optional)"
+            placeholder="Select your gender"
             selectedValue={gender}
             onValueChange={setGender}
           />
@@ -98,7 +102,7 @@ const Signup: React.FC = () => {
           <Input
             label="Age"
             variant='number'
-            placeholder="Enter your age (optional)"
+            placeholder="Enter your age"
             value={age}
             onChangeText={setAge}
           />
@@ -106,7 +110,7 @@ const Signup: React.FC = () => {
           <Input
             label="Date of Birth"
             variant="number"
-            placeholder="DD/MM/YY"
+            placeholder="DD/MM/YYYY"
             value={dob}
             onChangeText={(text) => {
               // Remove any non-numeric characters
@@ -116,16 +120,29 @@ const Signup: React.FC = () => {
                 formattedText = `${formattedText.slice(0, 2)}/${formattedText.slice(2)}`;
               }
               if (formattedText.length > 5) {
-                formattedText = `${formattedText.slice(0, 5)}/${formattedText.slice(5, 7)}`;
+                formattedText = `${formattedText.slice(0, 5)}/${formattedText.slice(5, 9)}`;
               }
-              // Limit to DD/MM/YY format
-              if (formattedText.length > 8) {
-                formattedText = formattedText.slice(0, 8);
+
+              if (formattedText.length > 10) {
+                formattedText = formattedText.slice(0, 10);
               }
               setDob(formattedText);
             }}
           />
-
+          <Input
+            label="Place"
+            variant="text"
+            placeholder="Enter Place"
+            value={place}
+            onChangeText={setPlace}
+          />
+          <Input
+            label="Disease"
+            variant="text"
+            placeholder="Enter Disease"
+            value={disease}
+            onChangeText={setDisease}
+          />
           <Button
             title="Create Account"
             onPress={handleSignup}
@@ -157,8 +174,8 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   header: {
-    marginTop: 40,
-    marginBottom: 40,
+    marginTop: 10,
+    marginBottom: 10,
   },
   welcomeText: {
     fontSize: 26,
