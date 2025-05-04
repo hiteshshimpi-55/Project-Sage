@@ -55,11 +55,9 @@ const ChatListing: React.FC = () => {
 
   useEffect(() => {
     loadUsers(true);
-
     const intervalId = setInterval(() => {
-      console.log('Polling for new chat data...');
-      loadUsers(true); // refresh all data
-    }, 5000);
+      loadUsers(true);
+    }, 10000);
 
     return () => clearInterval(intervalId);
   }, []);

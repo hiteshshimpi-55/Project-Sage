@@ -346,6 +346,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   //   } else {
   //     const permission = PERMISSIONS.IOS.MICROPHONE;
   //     const status = await check(permission);
+  //     console.log('Permission status:', status);
 
   //     if (status === RESULTS.GRANTED) {
   //       return true;
@@ -358,7 +359,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 
   const startRecording = async () => {
     try {
-      // // const hasPermission = await requestPermission();
+      // const hasPermission = await requestPermission();
       // if (!hasPermission) {
       //   Alert.alert('Permission Denied', 'Microphone permission is required for recording audio.');
       //   return;
