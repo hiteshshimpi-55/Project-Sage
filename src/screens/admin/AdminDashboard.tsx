@@ -1,49 +1,109 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   Alert,
   Text,
   TextInput,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import UserCard from '../../components/molecules/UserCard';
-import { UserService } from '../../utils/user_service';
-import { ChatService } from '../../utils/chat_service';
+import {UserService} from '../../utils/user_service';
+import {ChatService} from '../../utils/chat_service';
 import {ChatServiceV2} from '../chats/service/chat_service';
-import supabase from '../../core/supabase';
+
+// Constants
+const PAGE_SIZE = 10;
+const FOLLOW_UP_TEMPLATE = `
+Dr. Pranita's Diet Consulting Follow-Up Record
+
+Please fill in the following details:
+
+- Name:
+- Age:
+- Height (in cm):
+- Weight (in kg):
+- कंबरेचा घेर / Waist Circumference (in cm):
+- कंबरेखालचा घेर / Hip Circumference (in cm):
+- Disease / इतर आजार (e.g., Diabetes / BP / Thyroid, etc.):
+- Recent HBA1C (if tested, please mention):
+- Medicine Taking (if any):
+- Daily Exercise (e.g., walk):
+- Place: Mumbai
+- Occupation: Journalist
+- Reference:
+- Mobile Number:
+- Alternative Mobile Number:
+- Package (per month):
+- Date of Joining:
+
+Follow-Up Weights:
+
+- Follow-Up 1: Weight (in kg) - Date:
+- Follow-Up 2: Weight (in kg) - Date:
+- Follow-Up 3: Weight (in kg) - Date:
+- Follow-Up 4: Weight (in kg) - Date:
+- Follow-Up 5: Weight (in kg) - Date:
+- Follow-Up 6: Weight (in kg) - Date:
+- Follow-Up 7: Weight (in kg) - Date:
+- Follow-Up 8: Weight (in kg):
+`;
+
+// Types
+interface User {
+  id: string;
+  full_name: string;
+  phone: string;
+  age?: number;
+  dob?: string;
+  gender?: string;
+  status: 'active' | 'inactive';
+}
 
 const AdminDashboard: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([]);
+  // State
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
-  const [totalUsers, setTotalUsers] = useState<number>(0);
-  const [totalActiveUsers, setTotalActiveUsers] = useState<number>(0);
-  const [totalInactiveUsers, setTotalInactiveUsers] = useState<number>(0);
+  const [page, setPage] = useState<number>(1);
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
 
+  // Methods
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const fetchedUsers = await UserService.getAllUsers('');
-      console.log('Fetched Users:', fetchedUsers);
+      const allUsers = await UserService.getAllUsers('');
 
       // Filter users based on search query
-      const filteredUsers = fetchedUsers.filter(
-        (user) =>
+      const filtered = allUsers.filter(
+        (user: User) =>
           user.full_name.toLowerCase().includes(search.toLowerCase()) ||
-          user.phone.includes(search)
+          user.phone.includes(search),
       );
 
-      // Update the statistics
-      const activeUsers = filteredUsers.filter((user) => user.status === 'active');
-      const inactiveUsers = filteredUsers.filter((user) => user.status === 'inactive');
+      // Calculate statistics
+      const activeUsers = filtered.filter(
+        (user: User) => user.status === 'active',
+      );
+      const inactiveUsers = filtered.filter(
+        (user: User) => user.status === 'inactive',
+      );
 
-      setTotalUsers(filteredUsers.length);
-      setTotalActiveUsers(activeUsers.length);
-      setTotalInactiveUsers(inactiveUsers.length);
-
-      setUsers(filteredUsers);
+      // Update state
+      setUsers(filtered);
+      setFilteredUsers(filtered.slice(0, PAGE_SIZE));
+      setStats({
+        total: filtered.length,
+        active: activeUsers.length,
+        inactive: inactiveUsers.length,
+      });
+      setPage(1);
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch users.');
     } finally {
@@ -51,94 +111,67 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const loadMoreUsers = () => {
+    const nextPage = page + 1;
+    const newUsers = users.slice(0, nextPage * PAGE_SIZE);
+    setFilteredUsers(newUsers);
+    setPage(nextPage);
+  };
+
   const handleActivateUser = async (userId: string) => {
-  try {
-    const activationTimestamp = new Date().toISOString(); // Current timestamp
-    await UserService.activateUser(userId, activationTimestamp);
-    Alert.alert('Success', 'User activated successfully.');
+    try {
+      const activationTimestamp = new Date().toISOString();
+      await UserService.activateUser(userId, activationTimestamp);
+      Alert.alert('Success', 'User activated successfully.');
 
-    // Fetch current user ID (admin)
-    const currentUserId = await ChatService.getCurrentUserId();
-    console.log('Current User ID:', currentUserId);
-    if (!currentUserId) {
-      throw new Error('Failed to fetch current user ID');
+      await sendWelcomeMessage(userId);
+      fetchUsers();
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        `Failed to activate user. ${(error as Error).message}`,
+      );
     }
+  };
 
-    console.log('User ID:', userId);
+  const sendWelcomeMessage = async (userId: string) => {
+    try {
+      const currentUserId = await ChatService.getCurrentUserId();
+      if (!currentUserId) throw new Error('Failed to fetch current user ID');
 
-    // Check if chat exists between admin and the user
-    const chatResponse = await ChatService.checkIfChatExists(currentUserId, userId);
-    let chatId: string | null | undefined = chatResponse?.chat_id;
+      // Check if chat exists or create one
+      const chatResponse = await ChatService.checkIfChatExists(
+        currentUserId,
+        userId,
+      );
 
-    console.log('Chat ID:', chatId);
+      let chatId = chatResponse?.chat_id;
+      if (!chatId) {
+        chatId = await ChatServiceV2.get_or_create_chat(currentUserId, userId);
+      }
 
-    // If no chat exists, create a new one
-    if (!chatId) {
-      chatId = await ChatServiceV2.get_or_create_chat(currentUserId, userId);
+      if (!chatId) throw new Error('Failed to create or retrieve chat');
+
+      // Get the chat user ID and send welcome message
+      const chat_user_id = await ChatService.getChatUserId(
+        currentUserId,
+        chatId,
+      );
+
+      if (typeof chat_user_id === 'string') {
+        await ChatService.sendTextMessage(
+          chatId,
+          chat_user_id,
+          FOLLOW_UP_TEMPLATE,
+        );
+      } else {
+        throw new Error('Invalid chat user ID');
+      }
+    } catch (error) {
+      console.error('Failed to send welcome message:', error);
+      throw error;
     }
-    console.log('Created Chat ID:', chatId);
-
-    if (!chatId) {
-      throw new Error('Failed to create or retrieve chat');
-    }
-
-    // Get the chat_user_id
-    let chat_user_id = await ChatService.getChatUserId(currentUserId, chatId);
-    
-    console.log('Chat User ID:', chat_user_id);
-
-    // Now chat_user_id is guaranteed to be a string
-    const message = `
-      Dr. Pranita's Diet Consulting Follow-Up Record
-
-      Please fill in the following details:
-
-      - Name:
-      - Age:
-      - Height (in cm):
-      - Weight (in kg):
-      - कंबरेचा घेर / Waist Circumference (in cm):
-      - कंबरेखालचा घेर / Hip Circumference (in cm):
-      - Disease / इतर आजार (e.g., Diabetes / BP / Thyroid, etc.):
-      - Recent HBA1C (if tested, please mention):
-      - Medicine Taking (if any):
-      - Daily Exercise (e.g., walk):
-      - Place: Mumbai
-      - Occupation: Journalist
-      - Reference:
-      - Mobile Number:
-      - Alternative Mobile Number:
-      - Package (per month):
-      - Date of Joining:
-
-      Follow-Up Weights:
-
-      - Follow-Up 1: Weight (in kg) - Date:
-      - Follow-Up 2: Weight (in kg) - Date:
-      - Follow-Up 3: Weight (in kg) - Date:
-      - Follow-Up 4: Weight (in kg) - Date:
-      - Follow-Up 5: Weight (in kg) - Date:
-      - Follow-Up 6: Weight (in kg) - Date:
-      - Follow-Up 7: Weight (in kg) - Date:
-      - Follow-Up 8: Weight (in kg):
-      `;
-    if (typeof chat_user_id === 'string') {
-      // Send "Hi" message to the user
-      await ChatService.sendTextMessage(chatId, chat_user_id, message);
-    } else {
-      throw new Error('Failed to get a valid chat user ID');
-    }
-
-    fetchUsers(); // Refresh the users list
-  } catch (error) {
-    if (error instanceof Error) {
-      Alert.alert('Error', `Failed to activate user. ${error.message}`);
-    } else {
-      Alert.alert('Error', 'An unexpected error occurred.');
-    }
-  }
-};
-  
+  };
 
   const handleMakeAdmin = async (userId: string) => {
     try {
@@ -150,64 +183,73 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleSearch = () => {
-    fetchUsers();
+  const handleDeactivateUser = async (userId: string) => {
+    try {
+      await UserService.deactivateUser(userId);
+      Alert.alert('Success', 'User deactivated successfully.');
+      fetchUsers();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to deactivate user.');
+    }
   };
+  const renderUserItem = ({item}: {item: User}) => (
+    <UserCard
+      key={item.id}
+      fullName={item.full_name}
+      phone={item.phone}
+      status={item.status}
+      onDeactivate={() => handleDeactivateUser(item.id)}
+      onActivate={() => handleActivateUser(item.id)}
+      onMakeAdmin={() => handleMakeAdmin(item.id)}
+    />
+  );
 
+  // Effects
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    const debounceTimeout = setTimeout(() => {
+      fetchUsers();
+    }, 300);
 
+    return () => clearTimeout(debounceTimeout);
+  }, [search]);
+
+  // Render
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
+      {/* Search */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
           placeholder="Search by name or phone"
           value={search}
-          onChangeText={setSearch}
-          onSubmitEditing={handleSearch}
+          onChangeText={text => setSearch(text)}
         />
       </View>
 
       {/* Statistics */}
       <View style={styles.statsContainer}>
-        <Text style={styles.stat}>Total Users: {totalUsers}</Text>
-        <Text style={styles.stat}>Active Users: {totalActiveUsers}</Text>
-        <Text style={styles.stat}>Inactive Users: {totalInactiveUsers}</Text>
+        <Text style={styles.stat}>Total Users: {stats.total}</Text>
+        <Text style={styles.stat}>Active: {stats.active}</Text>
+        <Text style={styles.stat}>Inactive: {stats.inactive}</Text>
       </View>
 
-      {/* User Cards */}
       {loading ? (
         <ActivityIndicator size="large" color="#007BFF" style={styles.loader} />
-      ) : users.length === 0 ? (
+      ) : filteredUsers.length === 0 ? (
         <Text style={styles.noDataText}>No users found.</Text>
       ) : (
-        <ScrollView style={styles.scrollContainer}>
-  {users.map((user) => (
-    <UserCard
-      key={user.id}
-      fullName={user.full_name}
-      phone={user.phone}
-      age={user.age}
-      dob={user.dob}
-      gender={user.gender}
-      status={user.status}
-      onActivate={
-        
-        user.status === 'active' ? undefined : () => handleActivateUser(user.id)
-      }
-      onMakeAdmin={() => handleMakeAdmin(user.id)}
-    />
-  ))}
-</ScrollView>
+        <FlatList
+          data={filteredUsers}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.scrollContainer}
+          renderItem={renderUserItem}
+          onEndReached={loadMoreUsers}
+          onEndReachedThreshold={0.5}
+        />
       )}
     </View>
   );
 };
-
-export default AdminDashboard;
 
 const styles = StyleSheet.create({
   container: {
@@ -248,3 +290,5 @@ const styles = StyleSheet.create({
     color: '#666',
   },
 });
+
+export default AdminDashboard;

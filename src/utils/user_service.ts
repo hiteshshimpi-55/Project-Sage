@@ -33,9 +33,16 @@ export class UserService {
     if (customError) throw customError;
   }
 
+  public static async deactivateUser(userId: string): Promise<void> {
+    const { error } = await adminAuthClient.updateUserById(userId, {
+      user_metadata: { status: 'inactive' },
+    });
+    if (error) throw error;
+  }
+
   public static async makeAdmin(userId: string): Promise<void> {
     const { error } = await adminAuthClient.updateUserById(userId, {
-      user_metadata: { role: 'admin' },
+      user_metadata: { role: 'admin', status: 'active'},
     });
     if (error) throw error;
   }

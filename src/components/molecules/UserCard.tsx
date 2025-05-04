@@ -1,26 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import {View, Text, StyleSheet, Alert} from 'react-native';
 import Button from '../atoms/Button/Button';
+import theme from '@utils/theme';
+
+const {colors, fonts, shadow_style} = theme;
 
 interface UserCardProps {
   fullName: string;
   phone: string;
-  age: number;
-  dob: string;
-  gender: string;
-  status: string;
-  onActivate?: () => void; // Made optional
+  status: 'active' | 'inactive';
+  onActivate?: () => void;
+  onDeactivate?: () => void;
   onMakeAdmin: () => void;
 }
 
 const UserCard: React.FC<UserCardProps> = ({
   fullName,
   phone,
-  age,
-  dob,
-  gender,
   status,
   onActivate,
+  onDeactivate,
   onMakeAdmin,
 }) => {
   const confirmAction = (action: string, callback: () => void) => {
@@ -28,41 +27,55 @@ const UserCard: React.FC<UserCardProps> = ({
       `Confirm ${action}`,
       `Are you sure you want to ${action.toLowerCase()}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Yes', onPress: callback },
-      ]
+        {text: 'Cancel', style: 'cancel'},
+        {text: 'Yes', onPress: callback},
+      ],
     );
   };
 
+  const isInactive = status === 'inactive';
+
   return (
-    <View style={styles.card}>
-      <View style={styles.circle}>
-        <Text style={styles.circleText}>{fullName[0].toUpperCase()}</Text>
+    <View style={[styles.card, shadow_style]}>
+      <View style={styles.topSection}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{fullName[0].toUpperCase()}</Text>
+        </View>
+
+        <View style={styles.info}>
+          <Text style={styles.name}>{fullName}</Text>
+          <Text style={styles.phone}>{phone}</Text>
+          <Text
+            style={[
+              styles.status,
+              status === 'active' ? styles.activeStatus : styles.inactiveStatus,
+            ]}>
+            {status.toUpperCase()}
+          </Text>
+        </View>
       </View>
-      <View style={styles.info}>
-        <Text style={styles.name}>{fullName}</Text>
-        <Text style={styles.details}>Phone: {phone}</Text>
-        <Text style={styles.details}>Age: {age}</Text>
-        <Text style={styles.details}>DOB: {dob}</Text>
-        <Text style={styles.details}>Gender: {gender}</Text>
-        <Text style={styles.details}>Status: {status}</Text>
-      </View>
+
       <View style={styles.actions}>
-        {status === 'inactive' && onActivate && (
+        <View style={styles.buttonWrapper}>
           <Button
-            title="Activate"
-            onPress={() => confirmAction('Activate User', onActivate)}
-            style={styles.activateButton}
+            title={isInactive ? 'Activate' : 'Deactivate'}
+            onPress={() =>
+              isInactive
+                ? confirmAction('Activate User', onActivate!)
+                : confirmAction('Deactivate User', onDeactivate!)
+            }
+            style={isInactive ? styles.activateButton : styles.deactivateButton}
           />
-        )}
-        {status === 'active' && (
-          <Text style={styles.activeText}>User is already active</Text>
-        )}
-        <Button
-          title="Make Admin"
-          onPress={() => confirmAction('Make Admin', onMakeAdmin)}
-          style={styles.adminButton}
-        />
+        </View>
+        {isInactive ? (
+          <View style={styles.buttonWrapper}>
+            <Button
+              title="Make Admin"
+              onPress={() => confirmAction('Make Admin', onMakeAdmin)}
+              style={styles.adminButton}
+            />
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -72,62 +85,84 @@ export default UserCard;
 
 const styles = StyleSheet.create({
   card: {
+    backgroundColor: colors.white,
+    padding: 16,
+    marginVertical: 8,
+    marginHorizontal: 12,
+    borderRadius: 12,
+  },
+  topSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    marginVertical: 8,
-    marginHorizontal: 10,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    elevation: 2,
+    marginBottom: 12,
   },
-  circle: {
+  avatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#007BFF',
+    backgroundColor: colors.primary_200,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  circleText: {
-    color: '#fff',
+  avatarText: {
+    color: colors.primary_600,
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: fonts.satoshi_bold,
   },
   info: {
     flex: 1,
-    marginLeft: 15,
+    marginLeft: 16,
   },
   name: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontFamily: fonts.satoshi_medium,
+    color: colors.text_900,
   },
-  details: {
+  phone: {
     fontSize: 14,
-    color: '#666',
+    fontFamily: fonts.satoshi_regular,
+    color: colors.text_600,
+    marginTop: 2,
+  },
+  status: {
+    marginTop: 4,
+    fontSize: 12,
+    fontFamily: fonts.satoshi_medium,
+  },
+  activeStatus: {
+    color: colors.success_main,
+  },
+  inactiveStatus: {
+    color: colors.error_main,
   },
   actions: {
+    flexDirection: 'row',
+    marginTop: 8,
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginLeft: 10,
+    gap: 8,
+  },
+  buttonWrapper: {
+    flex: 1,
   },
   activateButton: {
-    backgroundColor: '#28A745',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-    marginBottom: 5,
+    backgroundColor: colors.primary_500,
+    paddingVertical: 10,
+    borderTopLeftRadius: 6,
+    borderBottomLeftRadius: 6,
+  },
+  deactivateButton: {
+    backgroundColor: colors.error_500,
+    paddingVertical: 10,
+    borderTopLeftRadius: 6,
+    borderBottomLeftRadius: 6,
   },
   adminButton: {
-    backgroundColor: '#FFC107',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 5,
+    backgroundColor: colors.primary_400,
+    paddingVertical: 10,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
   },
-  activeText: {
-    color: 'green',
-    fontWeight: 'bold',
-    marginBottom: 5,
+  disabledButton: {
+    backgroundColor: colors.grey_300,
   },
 });
