@@ -19,35 +19,21 @@ const formatTime = (timestamp: string) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-const PAGE_SIZE = 20;
 
 const ChatListing: React.FC = () => {
   const { user: currentUser } = useUser();
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
   const navigation = useNavigation<NavigationProp<any>>();
 
   const loadUsers = async (isInitial = false) => {
     try {
-      const offset = isInitial ? 0 : page * PAGE_SIZE;
       const data = await ChatListingService.get_chat_listing_page(
         currentUser?.id!,
-        currentUser?.isAdmin!,
-        PAGE_SIZE,
-        offset
+        currentUser?.isAdmin!
       );
+      setUsers(data)
 
-      if (isInitial) {
-        setUsers(data);
-        setPage(1);
-      } else {
-        setUsers(prev => [...prev, ...data]);
-        setPage(prev => prev + 1);
-      }
-
-      setHasMore(data.length === PAGE_SIZE);
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -67,7 +53,7 @@ const ChatListing: React.FC = () => {
     return fullName.includes(searchQuery.toLowerCase());
   });
 
-  const renderUser = ({ item }: { item: ChatUser }) => {
+  const renderUser = ({ item,index }: { item: ChatUser,index: number }) => {
     const getMessagePreview = () => {
       switch (item.last_message_type) {
         case 'image':
@@ -96,7 +82,7 @@ const ChatListing: React.FC = () => {
           });
         }}
       >
-        <Image source={{ uri: 'https://picsum.photos/200/300' }} style={styles.profilePic} />
+        <Image source={{ uri: `https://picsum.photos/seed/${item.phone_number}/200/300` }} style={styles.profilePic} />
 
         <View style={styles.textContainer}>
           <Text style={styles.userName}>{item.name}</Text>
@@ -136,9 +122,6 @@ const ChatListing: React.FC = () => {
         renderItem={renderUser}
         keyExtractor={(item) => item.chat_id ?? item.user_id}
         contentContainerStyle={styles.listContainer}
-        onEndReached={() => {
-          if (hasMore) loadUsers();
-        }}
         onEndReachedThreshold={0.5}
       />
     </View>

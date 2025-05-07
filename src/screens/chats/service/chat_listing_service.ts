@@ -35,11 +35,9 @@ export class ChatListingService {
   }
 
 
-  public static async get_user_ongoing_chats(current_user_id: string,limit:number=20,offset:number=0) {
+  public static async get_user_ongoing_chats(current_user_id: string){
     const {data, error} = await supabase.rpc('get_user_chats', {
-        current_user_id: current_user_id,
-        limit_val: limit,
-        offset_val: offset,
+        current_user_id: current_user_id
       });
   
       if (error) {
@@ -69,9 +67,9 @@ export class ChatListingService {
     return filteredUsers;
     
   }
-  public static async get_chat_listing_page(current_user_id: string, is_admin:boolean = false,limit:number=20,offset:number=0) {
+  public static async get_chat_listing_page(current_user_id: string, is_admin:boolean = false) {
 
-    const ongoing_chats = await this.get_user_ongoing_chats(current_user_id,limit,offset);
+    const ongoing_chats = await this.get_user_ongoing_chats(current_user_id);
     const ongoing_chat_ids = ongoing_chats.map(chat => chat.user_id);
     if (!is_admin) {
       return ongoing_chats;

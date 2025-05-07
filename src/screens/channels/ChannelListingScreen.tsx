@@ -1,6 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Image, ActivityIndicator, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  Image,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../App';
 import theme from '@utils/theme';
@@ -8,6 +18,8 @@ import { Plus } from 'phosphor-react-native';
 import { Channel, ChannelListingService } from './service/channel_service';
 import { useUser } from '@hooks/UserContext';
 import { ServiceFunctions } from '../../utils/service';
+
+const PAGE_LIMIT = 20;
 
 const formatTime = (timestamp: string) => {
   const date = new Date(timestamp);
@@ -18,63 +30,100 @@ const ChannelListing: React.FC = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-
-  const {user:current_user} = useUser();
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  const { user: current_user } = useUser();
 
   useFocusEffect(
     useCallback(() => {
-      loadUsers();
+      resetAndLoad();
     }, [])
   );
 
-  const loadUsers = async () => {
-    setIsLoading(true);
+  const resetAndLoad = async () => {
+    setPage(0);
+    setHasMore(true);
+    setChannels([]);
+    await loadUsers(0);
+  };
+
+  const loadUsers = async (pageNumber: number) => {
+    if (!current_user) return;
+
+    const offset = pageNumber * PAGE_LIMIT;
+
+    if (pageNumber === 0) setIsLoading(true);
+    else setIsFetchingMore(true);
+
     try {
-      const data = await ChannelListingService.get_chat_listing_page(current_user!.id);
-      setChannels(data);
-    } catch (error:any) {
-      Alert.alert(error);
+      const data = await ChannelListingService.get_user_channels(
+        current_user.id,
+        PAGE_LIMIT,
+        offset
+      );
+
+      if (data.length < PAGE_LIMIT) {
+        setHasMore(false);
+      }
+
+      setChannels((prev) =>
+        pageNumber === 0 ? data : [...prev, ...data]
+      );
+      setPage(pageNumber);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to load channels');
     } finally {
       setIsLoading(false);
+      setIsFetchingMore(false);
     }
   };
 
-  const filteredUsers = channels.filter((user) => {
-    const fullName = user.name!.toLowerCase();
-    return fullName.includes(searchQuery.toLowerCase());
-  });
+  const handleLoadMore = () => {
+    if (!isFetchingMore && hasMore && !isLoading) {
+      loadUsers(page + 1);
+    }
+  };
+
+  const filteredUsers = channels.filter((user) =>
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const renderUser = ({ item }: { item: Channel }) => (
     <TouchableOpacity
       style={styles.userItem}
       onPress={() => {
-        navigation.navigate('ChatScreen', { id: item.id!, type: item.type!, name: item.name! });
+        navigation.navigate('ChatScreen', {
+          id: item.id!,
+          type: item.type!,
+          name: item.name!,
+        });
       }}
     >
       <Image
-        source={{ uri: "https://picsum.photos/200/300" }}
+        source={{ uri: `https://picsum.photos/seed/${item.id}200/300` }}
         style={styles.channelImage}
       />
-
       <View style={styles.textContainer}>
         <Text style={styles.userName}>{item.name}</Text>
         <Text style={styles.latestMessage} numberOfLines={1}>
-          {ServiceFunctions.getMessagePreview(item.last_message_type!, item.last_message!)}
+          {ServiceFunctions.getMessagePreview(
+            item.last_message_type!,
+            item.last_message!
+          )}
         </Text>
       </View>
-
       <View style={styles.metaContainer}>
         <Text style={styles.messageTime}>
           {item.last_message_time ? formatTime(item.last_message_time) : ''}
         </Text>
         {item.unread_message_count! > 0 && (
           <View style={styles.unreadBadge}>
-            <Text style={styles.unreadCountText}>{item.unread_message_count}</Text>
+            <Text style={styles.unreadCountText}>
+              {item.unread_message_count}
+            </Text>
           </View>
         )}
       </View>
@@ -92,7 +141,7 @@ const ChannelListing: React.FC = () => {
         />
       </View>
 
-      {isLoading ? (
+      {isLoading && page === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary_600} />
         </View>
@@ -102,6 +151,15 @@ const ChannelListing: React.FC = () => {
           renderItem={renderUser}
           keyExtractor={(item) => item.id!}
           contentContainerStyle={styles.listContainer}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            isFetchingMore ? (
+              <View style={{ padding: 16 }}>
+                <ActivityIndicator color={theme.colors.primary_600} />
+              </View>
+            ) : null
+          }
         />
       ) : (
         <View style={styles.noUsersContainer}>
@@ -109,18 +167,24 @@ const ChannelListing: React.FC = () => {
         </View>
       )}
 
-{current_user?.isAdmin &&    <TouchableOpacity
-        style={[styles.floatingButton, isLoading && styles.disabledButton]}
-        onPress={() => navigation.navigate('ChannelDetailsScreen', { id: null })}
-        disabled={isLoading}
-      >
-        <Plus size={24} color="#fff" />
-      </TouchableOpacity>}
+      {current_user?.isAdmin && (
+        <TouchableOpacity
+          style={[
+            styles.floatingButton,
+            (isLoading || isFetchingMore) && styles.disabledButton,
+          ]}
+          onPress={() => navigation.navigate('ChannelDetailsScreen', { id: null })}
+          disabled={isLoading || isFetchingMore}
+        >
+          <Plus size={24} color="#fff" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
 
 export default ChannelListing;
+
 
 const styles = StyleSheet.create({
   container: {

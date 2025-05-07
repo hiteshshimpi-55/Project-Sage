@@ -216,6 +216,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
           const newMessage = payload.new as Message;
           console.log('New message received:', newMessage);
           setMessages(prevMessages => [newMessage, ...prevMessages]);
+          markAsRead();
         },
       )
       .subscribe();
@@ -243,6 +244,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     loadChatData();
   }, [currentChatId, fetchMessages, fetchAndSetUsernames]);
 
+
+
+  const markAsRead = async () => {
+    if (!currentChatUserId) return;
+    try {
+      await ChatServiceV2.markAsRead(currentChatUserId);
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  }
   // Message functions
   const handleSend = async () => {
     if (!currentChatId || !currentChatUserId) return;

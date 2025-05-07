@@ -94,10 +94,10 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file('release-key.keystore')
-            storePassword 'hitesh'
-            keyAlias 'release'
-            keyPassword 'hitesh'
+            storeFile file('sage.keystore')
+            storePassword 'hitesh@123'
+            keyAlias 'sage-alias'
+            keyPassword 'hitesh@123'
         }
     }
     buildTypes {

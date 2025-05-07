@@ -27,9 +27,11 @@ export class ChannelListingService {
   }
 
 
-  public static async get_user_channels(current_user_id: string) {
+  public static async get_user_channels(current_user_id: string,limit:number = 20, offset:number = 1) {
     const {data, error} = await supabase.rpc('get_channels', {
         current_user_id: current_user_id,
+        page_limit: limit,
+        page_offset: offset
       });
   
       if (error) {
@@ -38,10 +40,6 @@ export class ChannelListingService {
       } else {
         return this.convert_chat_users(data);
       }
-  }
-  public static async get_chat_listing_page(current_user_id: string, is_admin:boolean = false) {
-    const channels = await this.get_user_channels(current_user_id);
-    return channels;
   }
 
   public static async get_channel_details(channel_id: string) {

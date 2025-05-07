@@ -63,7 +63,7 @@ const ProfileScreen = () => {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Image
-          source={{ uri: 'https://picsum.photos/200/300' }}
+          source={{ uri: `https://picsum.photos/seed/${user?.phone_number}/200/300` }}
           style={styles.avatar}
         />
         <Text style={styles.userName}>{user.user_metadata?.full_name || 'User'}</Text>
@@ -81,6 +81,7 @@ const ProfileScreen = () => {
           <InfoItem label="Gender" value={user.user_metadata?.gender ?? 'N/A'} />
           <InfoItem label="Date of Birth" value={user.user_metadata?.dob ?? 'N/A'} />
           <InfoItem label="Disease" value={user.user_metadata?.disease ?? 'N/A'} />
+          <InfoItem label="Place" value={user.user_metadata?.place ?? 'N/A'} />
         </Section>
       </View>
 
