@@ -63,7 +63,7 @@ const AppBar = () => {
   };
   return (
     <View style={styles.appBar}>
-      <Text style={styles.appBarText}>SAGE</Text>
+      <Text style={styles.appBarText}>Dr. Pranita</Text>
       {!userContext?.isAdmin && (
         <TouchableOpacity
           style={styles.appBarButton}
