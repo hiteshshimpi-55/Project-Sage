@@ -257,9 +257,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   // Message functions
   const handleSend = async () => {
     if (!currentChatId || !currentChatUserId) return;
-    try {
-      setIsLoading(true);
-      
+    try {      
       if (audioPath) {
         await sendAudio();
       } else if (inputText.trim()) {
@@ -275,8 +273,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     } catch (error) {
       console.error('Error sending message:', error);
       Alert.alert('Error', 'Failed to send message');
-    } finally {
-      setIsLoading(false);
     }
   };
 

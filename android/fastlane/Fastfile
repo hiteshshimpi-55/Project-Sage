@@ -67,10 +67,14 @@ platform :android do
 
 		# Upload Android App Bundle to PlayStore like Internal testing Release
     upload_to_play_store(
-      track: 'closed',
+      track: 'internal',
       version_name: package["version"],
       json_key: './fastlane/service_account.json'
     )
   end
   
+  desc "Deploy a new version to Google Play"
+  lane :deploy do
+    gradle(task: "clean assembleRelease")
+    upload_to_play_store
 end
