@@ -24,13 +24,6 @@ export class UserService {
       user_metadata: { status: 'active', activation_date: activationTimestamp },
     });
     if (error) throw error;
-  
-    // Optionally, update the custom_users table if you're using it
-    const { error: customError } = await supabase
-      .from('custom_users')
-      .update({ status: 'active', activation_date: activationTimestamp })
-      .eq('id', userId);
-    if (customError) throw customError;
   }
 
   public static async deactivateUser(userId: string): Promise<void> {

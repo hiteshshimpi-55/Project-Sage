@@ -163,8 +163,10 @@ const AdminDashboard: React.FC = () => {
           chatId,
           chat_user_id,
           FOLLOW_UP_TEMPLATE,
+          'welcome_text'
         );
       } else {
+        console.log('Chat user ID is not a string:', chat_user_id);
         throw new Error('Invalid chat user ID');
       }
     } catch (error) {

@@ -609,13 +609,14 @@ export class ChatService {
     chatId: string,
     chatUserId: string,
     text: string,
+    type: string = 'text',
   ) {
     try {
       console.log('Sending text message:', chatId, chatUserId, text);
       const message = {
         chat_id: chatId,
         created_by: chatUserId,
-        type: 'text',
+        type: type,
         text: text,
         media_url: '',
       };

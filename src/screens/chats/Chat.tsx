@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo} from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  PermissionsAndroid,
   SafeAreaView,
   Alert,
   Image,
@@ -17,13 +16,13 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import {check, request, PERMISSIONS, RESULTS} from 'react-native-permissions';
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import supabase from '../../core/supabase';
-import {ChatService, Message} from '../../utils/chat_service';
-import {ChatServiceV2} from './service/chat_service';
-import {RouteProp} from '@react-navigation/native';
-import {RootStackParamList} from 'src/App';
+import { ChatService, Message } from '../../utils/chat_service';
+import { ChatServiceV2 } from './service/chat_service';
+import { RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from 'src/App';
 import theme from '@utils/theme';
 import {
   PaperPlaneTilt,
@@ -37,10 +36,13 @@ import {
   Info,
   X,
 } from 'phosphor-react-native';
-import {useNavigation, NavigationProp} from '@react-navigation/native';
-import {launchImageLibrary} from 'react-native-image-picker';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { launchImageLibrary } from 'react-native-image-picker';
 import AudioPlayer from '@components/molecules/Chat/AudioPlayer';
-import {useUser} from '@hooks/UserContext';
+import { useUser } from '@hooks/UserContext';
+import { Linking } from 'react-native';
+import DeviceInfo from 'react-native-device-info';
+import { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
 
 // Types
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
@@ -51,24 +53,22 @@ interface ChatScreenProps {
   route: ChatScreenRouteProp;
 }
 
-const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
+const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const {user: userContext} = useUser();
-  
+  const { user: userContext } = useUser();
+
   // Animation values
   const pulseAnimation = useState(new Animated.Value(1))[0];
   const inputWidthAnimation = useState(new Animated.Value(1))[0];
-  
+
   // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [currentChatUserId, setCurrentChatUserId] = useState<string | null>(null);
-  const [usernames, setUsernames] = useState<{[key: string]: string}>({});
+  const [usernames, setUsernames] = useState<{ [key: string]: string }>({});
   const [chatUserName, setChatUserName] = useState<string>(route.params.name || '');
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Audio recording states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState('0:00');
   const [audioPath, setAudioPath] = useState<string | null>(null);
@@ -76,13 +76,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
   const [currentPosition, setCurrentPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showRecordingControls, setShowRecordingControls] = useState(false);
-  
-  // Image states
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isRecording) {
-      // Start the pulse animation
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnimation, {
@@ -99,22 +96,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
           }),
         ])
       ).start();
-      
-      // Shrink the input
       Animated.timing(inputWidthAnimation, {
         toValue: 0,
         duration: 300,
         useNativeDriver: false,
       }).start();
     } else {
-      // Stop the pulse animation
       Animated.timing(pulseAnimation, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
       }).start();
-      
-      // Expand the input back
       Animated.timing(inputWidthAnimation, {
         toValue: 1,
         duration: 300,
@@ -131,28 +123,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     setExpandedImage(null);
   };
 
-  // Initialize chat
   const initialize = useCallback(async () => {
-    if (!userContext?.id) return;    
+    if (!userContext?.id) return;
     try {
-      let chat_id:any = null;
+      let chat_id: any = null;
       if (route.params.type === 'one-to-many') {
         chat_id = route.params.id;
       } else {
-        chat_id = await ChatServiceV2.get_or_create_chat(
-          userContext.id,
-          route.params.id
-        );
+        chat_id = await ChatServiceV2.get_or_create_chat(userContext.id, route.params.id);
       }
-      const chat_user_id = await ChatService.getChatUserId(
-        userContext.id,
-        chat_id,
-      );
-
+      const chat_user_id = await ChatService.getChatUserId(userContext.id, chat_id);
       if (chat_user_id === null) {
         throw new Error('Chat User ID not found');
       }
-      console.log("Chat ID", chat_id, chat_user_id);
       setCurrentChatId(chat_id);
       setCurrentChatUserId(chat_user_id);
       await ChatServiceV2.markAsRead(chat_user_id!);
@@ -161,47 +144,37 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     }
   }, [userContext?.id, route.params.id]);
 
-  // Fetch messages
   const fetchMessages = useCallback(async () => {
     if (!currentChatId) return;
-
     try {
-      const {data, error} = await supabase
+      const { data, error } = await supabase
         .from('message')
         .select('*')
         .eq('chat_id', currentChatId)
-        .order('created_at', {ascending: false})
+        .order('created_at', { ascending: false })
         .limit(20);
-
       if (error) {
         console.error('Error fetching messages:', error);
         return;
       }
-
       setMessages(data || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
   }, [currentChatId]);
 
-  // Fetch usernames
   const fetchAndSetUsernames = useCallback(async () => {
     if (!currentChatId) return;
-
     try {
-      const userMap = await ChatService.getAllUsersFromSystemWithChatUserId(
-        currentChatId,
-      );
+      const userMap = await ChatService.getAllUsersFromSystemWithChatUserId(currentChatId);
       setUsernames(userMap);
     } catch (error) {
       console.error('Error fetching usernames:', error);
     }
   }, [currentChatId]);
 
-  // Setup real-time subscription
   useEffect(() => {
     if (!currentChatId) return;
-
     const channel = supabase
       .channel('realtime:message')
       .on(
@@ -213,38 +186,45 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
           filter: `chat_id=eq.${currentChatId}`,
         },
         payload => {
+          console.log('Real-time message received:', payload);
           const newMessage = payload.new as Message;
-          console.log('New message received:', newMessage);
-          setMessages(prevMessages => [newMessage, ...prevMessages]);
+          setMessages(prevMessages => {
+            // Replace temporary message if it exists
+            const tempIndex = prevMessages.findIndex(
+              msg => msg.id.startsWith('temp-') && msg.text === newMessage.text && msg.type === newMessage.type
+            );
+            if (tempIndex !== -1) {
+              const updatedMessages = [...prevMessages];
+              updatedMessages[tempIndex] = newMessage;
+              return updatedMessages;
+            }
+            return [newMessage, ...prevMessages];
+          });
           markAsRead();
         },
       )
-      .subscribe();
-
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        if (status === REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR) {
+          setTimeout(() => channel.subscribe(), 5000);
+        }
+      });
     return () => {
       supabase.removeChannel(channel);
     };
   }, [currentChatId]);
 
-  // Initialize effects
   useEffect(() => {
     initialize();
   }, [initialize]);
 
   useEffect(() => {
     if (!currentChatId) return;
-  
     const loadChatData = async () => {
-      await Promise.all([
-        fetchMessages(),
-        fetchAndSetUsernames(),
-      ]);
+      await Promise.all([fetchMessages(), fetchAndSetUsernames()]);
     };
-  
     loadChatData();
   }, [currentChatId, fetchMessages, fetchAndSetUsernames]);
-
-
 
   const markAsRead = async () => {
     if (!currentChatUserId) return;
@@ -253,25 +233,41 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
-  }
-  // Message functions
+  };
+
   const handleSend = async () => {
     if (!currentChatId || !currentChatUserId) return;
-    try {      
+    try {
       if (audioPath) {
-        await sendAudio();
+        const tempMessage: Message = {
+          id: `temp-${Date.now()}`,
+          chat_id: currentChatId,
+          created_by: currentChatUserId,
+          text: '',
+          type: 'audio',
+          created_at: new Date().toISOString(),
+          media_url: audioPath,
+        };
+        setMessages(prevMessages => [tempMessage, ...prevMessages]);
+        await sendAudio(tempMessage.id);
       } else if (inputText.trim()) {
-        await ChatService.sendTextMessage(
-          currentChatId,
-          currentChatUserId,
-          inputText.trim(),
-        );
+        const tempMessage: Message = {
+          id: `temp-${Date.now()}`,
+          chat_id: currentChatId,
+          created_by: currentChatUserId,
+          text: inputText.trim(),
+          type: 'text',
+          created_at: new Date().toISOString(),
+          media_url: '',
+        };
+        setMessages(prevMessages => [tempMessage, ...prevMessages]);
         setInputText('');
+        await ChatService.sendTextMessage(currentChatId, currentChatUserId, inputText.trim());
+        await ChatServiceV2.markAsRead(currentChatUserId!);
       }
-
-      await ChatServiceV2.markAsRead(currentChatUserId!);
     } catch (error) {
       console.error('Error sending message:', error);
+      setMessages(prevMessages => prevMessages.filter(msg => !msg.id.startsWith('temp-')));
       Alert.alert('Error', 'Failed to send message');
     }
   };
@@ -286,20 +282,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     }
   };
 
-  const handleSendImage = async (imageUri: string) => {
+  const handleSendImage = async (imageUri: string, tempId: string) => {
     if (!currentChatId || !currentChatUserId) return;
-    
     try {
       setIsLoading(true);
-      await ChatService.sendImageMessage(
-        currentChatId,
-        currentChatUserId,
-        imageUri,
-      );
-
+      await ChatService.sendImageMessage(currentChatId, currentChatUserId, imageUri);
       await ChatServiceV2.markAsRead(currentChatUserId!);
     } catch (error) {
       console.error('Error sending image:', error);
+      setMessages(prevMessages => prevMessages.filter(msg => msg.id !== tempId));
       Alert.alert('Error', 'Failed to send image');
     } finally {
       setIsLoading(false);
@@ -312,23 +303,34 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
         mediaType: 'photo',
         quality: 0.8,
       });
-
       if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
-        await handleSendImage(result.assets[0].uri);
+        const tempId = `temp-${Date.now()}`;
+        const tempMessage: Message = {
+          id: tempId,
+          chat_id: currentChatId!,
+          created_by: currentChatUserId!,
+          text: '',
+          type: 'image',
+          created_at: new Date().toISOString(),
+          media_url: result.assets[0].uri,
+        };
+        setMessages(prevMessages => [tempMessage, ...prevMessages]);
+        await handleSendImage(result.assets[0].uri, tempId);
       }
     } catch (error) {
       console.error('Error picking image:', error);
+      setMessages(prevMessages => prevMessages.filter(msg => !msg.id.startsWith('temp-')));
+      Alert.alert('Error', 'Failed to pick image');
     }
   };
 
   const handleLongPress = (itemId: string) => {
     if (!userContext?.isAdmin) return;
-
     Alert.alert(
       'Delete Message',
       'Are you sure you want to delete this message?',
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
@@ -338,56 +340,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     );
   };
 
-  // Audio recording functions
-  // const requestPermission = async () => {
-  //   if (Platform.OS === 'android') {
-  //     const granted = await PermissionsAndroid.request(
-  //       PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-  //       {
-  //         title: 'Microphone Permission',
-  //         message: 'This app needs access to your microphone to record audio.',
-  //         buttonPositive: 'OK',
-  //       },
-  //     );
-  //     return granted === PermissionsAndroid.RESULTS.GRANTED;
-  //   } else {
-  //     const permission = PERMISSIONS.IOS.MICROPHONE;
-  //     const status = await check(permission);
-  //     console.log('Permission status:', status);
-
-  //     if (status === RESULTS.GRANTED) {
-  //       return true;
-  //     } else {
-  //       const newStatus = await request(permission);
-  //       return newStatus === RESULTS.GRANTED;
-  //     }
-  //   }
-  // };
-
   const startRecording = async () => {
     try {
-      // const hasPermission = await requestPermission();
-      // if (!hasPermission) {
-      //   Alert.alert('Permission Denied', 'Microphone permission is required for recording audio.');
-      //   return;
-      // }
-
       setIsRecording(true);
       setShowRecordingControls(true);
       const path = await audioRecorderPlayer.startRecorder();
       setAudioPath(path);
-      
       let counter = 0;
       const interval = setInterval(() => {
         counter += 1;
         setRecordingDuration(
-          `${Math.floor(counter / 60)}:${(counter % 60)
-            .toString()
-            .padStart(2, '0')}`,
+          `${Math.floor(counter / 60)}:${(counter % 60).toString().padStart(2, '0')}`,
         );
       }, 1000);
-
-      // Auto-stop after 60 seconds
       setTimeout(() => {
         clearInterval(interval);
         if (isRecording) {
@@ -404,12 +369,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 
   const stopRecording = async () => {
     if (!isRecording) return;
-    
     try {
       const path = await audioRecorderPlayer.stopRecorder();
       setAudioPath(path);
       setIsRecording(false);
-      // Keep showing recording controls until audio is sent or deleted
     } catch (error) {
       console.error('Error stopping recording:', error);
       setIsRecording(false);
@@ -419,7 +382,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 
   const playAudio = async () => {
     if (!audioPath) return;
-    
     try {
       setIsPlaying(true);
       await audioRecorderPlayer.startPlayer(audioPath);
@@ -440,7 +402,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 
   const pauseAudio = async () => {
     if (!audioPath || !isPlaying) return;
-    
     try {
       setIsPlaying(false);
       await audioRecorderPlayer.pausePlayer();
@@ -451,7 +412,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 
   const resumeAudio = async () => {
     if (!audioPath) return;
-    
     try {
       setIsPlaying(true);
       await audioRecorderPlayer.resumePlayer();
@@ -473,7 +433,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 
   const togglePlayback = async () => {
     if (!audioPath) return;
-
     if (isPlaying) {
       await pauseAudio();
     } else {
@@ -486,24 +445,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     }
   };
 
-  const sendAudio = async () => {
+  const sendAudio = async (tempId: string) => {
     if (!audioPath || !currentChatId || !currentChatUserId) return;
-    
     try {
-      await ChatService.sendAudioMessage(
-        currentChatId,
-        currentChatUserId,
-        audioPath,
-      );
+      await ChatService.sendAudioMessage(currentChatId, currentChatUserId, audioPath);
       deleteRecording();
       setShowRecordingControls(false);
     } catch (error) {
       console.error('Error sending audio:', error);
+      setMessages(prevMessages => prevMessages.filter(msg => msg.id !== tempId));
       Alert.alert('Error', 'Failed to send audio message');
     }
   };
 
-  // Cleanup audio resources when component unmounts
   useEffect(() => {
     return () => {
       audioRecorderPlayer.stopRecorder();
@@ -512,105 +466,84 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
     };
   }, []);
 
-  // Memoized components
-  const renderMessage = useCallback(({item}: {item: Message}) => {
-    const messageTime = new Date(item.created_at).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  
-    const isCurrentUser = item.created_by === currentChatUserId;
-  
-    return (
-      <>
-        <TouchableOpacity
-          onLongPress={() => handleLongPress(item.id)}
-          activeOpacity={0.9}
-        >
-          <View
-            style={[
-              styles.messageBubble,
-              isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
-            ]}
-          >
-            {route.params.type === 'one-to-many' &&
-              !isCurrentUser &&
-              usernames[item.created_by] && (
+  const renderMessage = useCallback(
+    ({ item }: { item: Message }) => {
+      const messageTime = new Date(item.created_at).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const isCurrentUser = item.created_by === currentChatUserId;
+      return (
+        <>
+          <TouchableOpacity onLongPress={() => handleLongPress(item.id)} activeOpacity={0.9}>
+            <View
+              style={[
+                styles.messageBubble,
+                isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
+              ]}
+            >
+              {route.params.type === 'one-to-many' && !isCurrentUser && usernames[item.created_by] && (
                 <Text style={styles.username}>{usernames[item.created_by]}</Text>
               )}
-  
-            {item.type === 'image' ? (
-              <TouchableOpacity onPress={() => handleImagePress(item.media_url)}>
-                <Image source={{ uri: item.media_url }} style={styles.imageMessage} />
-              </TouchableOpacity>
-            ) : item.type === 'audio' ? (
-              <AudioPlayer audioUrl={item.media_url} />
-            ) : (
+              {item.type === 'image' ? (
+                <TouchableOpacity onPress={() => handleImagePress(item.media_url)}>
+                  <Image source={{ uri: item.media_url }} style={styles.imageMessage} />
+                </TouchableOpacity>
+              ) : item.type === 'audio' ? (
+                <AudioPlayer audioUrl={item.media_url} />
+              ) : (
+                <Text
+                  style={[
+                    styles.messageText,
+                    isCurrentUser ? styles.currentUserText : styles.otherUserText,
+                  ]}
+                >
+                  {item.text}
+                </Text>
+              )}
               <Text
-                style={[
-                  styles.messageText,
-                  isCurrentUser ? styles.currentUserText : styles.otherUserText,
-                ]}
+                style={
+                  isCurrentUser ? styles.currentUserTimeText : styles.otherUserTimeText
+                }
               >
-                {item.text}
+                {messageTime}
               </Text>
-            )}
-  
-            <Text
-              style={
-                isCurrentUser
-                  ? styles.currentUserTimeText
-                  : styles.otherUserTimeText
-              }
-            >
-              {messageTime}
-            </Text>
-          </View>
-        </TouchableOpacity>
-  
-        {/* Modal for Expanded Image */}
-        <Modal visible={!!expandedImage} transparent={true} animationType="fade">
-          <View style={styles.modalContainer}>
-            <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-            {expandedImage && (
-              <Image source={{ uri: expandedImage }} style={styles.expandedImage} />
-            )}
-          </View>
-        </Modal>
-      </>
-    );
-  }, [currentChatUserId, route.params.type, usernames, handleLongPress]);
+            </View>
+          </TouchableOpacity>
+          <Modal visible={!!expandedImage} transparent={true} animationType="fade">
+            <View style={styles.modalContainer}>
+              <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+              {expandedImage && (
+                <Image source={{ uri: expandedImage }} style={styles.expandedImage} />
+              )}
+            </View>
+          </Modal>
+        </>
+      );
+    },
+    [currentChatUserId, route.params.type, usernames, handleLongPress],
+  );
 
-  // Rendering the recording UI
   const renderRecordingUI = () => {
     if (!showRecordingControls) return null;
-
     return (
       <View style={styles.recordingContainer}>
         {isRecording ? (
-          // Recording in progress UI
           <>
-            <Animated.View 
-              style={[
-                styles.recordingIndicator,
-                { transform: [{ scale: pulseAnimation }] }
-              ]}
+            <Animated.View
+              style={[styles.recordingIndicator, { transform: [{ scale: pulseAnimation }] }]}
             />
             <View style={styles.recordingTextContainer}>
               <Text style={styles.recordingText}>Recording {recordingDuration}</Text>
               <Text style={styles.recordingHint}>Tap to stop</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.stopRecordingButton}
-              onPress={stopRecording}
-            >
+            <TouchableOpacity style={styles.stopRecordingButton} onPress={stopRecording}>
               <Stop weight="fill" size={24} color={theme.colors.white} />
             </TouchableOpacity>
           </>
         ) : (
-          // Recording preview UI
           <View style={styles.audioPreview}>
             <TouchableOpacity onPress={togglePlayback}>
               {isPlaying ? (
@@ -625,9 +558,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
                 style={[
                   styles.progressBar,
                   {
-                    width: duration
-                      ? `${(currentPosition / duration) * 100}%`
-                      : '0%',
+                    width: duration ? `${(currentPosition / duration) * 100}%` : '0%',
                   },
                 ]}
               />
@@ -647,33 +578,27 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.appBar}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <CaretLeft size={24} color={theme.colors.text_700} weight="bold" />
         </TouchableOpacity>
-        <Image
-          source={{uri: 'https://picsum.photos/200/300'}}
-          style={styles.profileImage}
-        />
+        <Image source={{ uri: 'https://picsum.photos/200/300' }} style={styles.profileImage} />
         <Text style={styles.appBarText}>{chatUserName}</Text>
         {currentChatId && route.params.type === 'one-to-many' && (
           <TouchableOpacity
             onPress={() => navigation.navigate('ChannelDetailsScreen', { id: currentChatId })}
-            style={styles.infoButton}>
+            style={styles.infoButton}
+          >
             <Info size={24} color={theme.colors.text_700} />
           </TouchableOpacity>
         )}
       </View>
       <View style={styles.divider} />
-      
-      {/* Chat area */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}>
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
         <FlatList
           data={messages}
           renderItem={renderMessage}
@@ -681,23 +606,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
           inverted
           style={styles.messageList}
           contentContainerStyle={styles.messageListContent}
+          extraData={messages}
         />
-        
-        {/* Input area */}
         <View style={styles.inputContainer}>
           {!showRecordingControls && (
-            <TouchableOpacity
-              onPress={handleImagePicker}
-              style={styles.imageButton}>
+            <TouchableOpacity onPress={handleImagePicker} style={styles.imageButton}>
               <ImageIcon size={24} color={theme.colors.primary_600} />
             </TouchableOpacity>
           )}
-
-          {/* Animated container for input or recording */}
-          <Animated.View style={[
-            styles.inputWrapper,
-            { flex: showRecordingControls ? 1 : inputWidthAnimation }
-          ]}>
+          <Animated.View style={[styles.inputWrapper, { flex: showRecordingControls ? 1 : inputWidthAnimation }]}>
             {showRecordingControls ? (
               renderRecordingUI()
             ) : (
@@ -713,35 +630,24 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
               />
             )}
           </Animated.View>
-
           <View style={styles.rightButtons}>
             {!showRecordingControls && (
-              <TouchableOpacity
-                onPress={startRecording}
-                style={styles.recordButton}>
+              <TouchableOpacity onPress={startRecording} style={styles.recordButton}>
                 <Microphone size={24} color={theme.colors.primary_600} />
               </TouchableOpacity>
             )}
-            
             {(!isRecording && (inputText.trim() || audioPath)) && (
-              <TouchableOpacity 
-                style={styles.sendButton} 
-                onPress={handleSend}
-                disabled={isLoading}>
+              <TouchableOpacity style={styles.sendButton} onPress={handleSend} disabled={isLoading}>
                 <PaperPlaneTilt
                   weight="fill"
                   size={32}
-                  color={isLoading 
-                    ? theme.colors.grey_400 
-                    : theme.colors.primary_600}
+                  color={isLoading ? theme.colors.grey_400 : theme.colors.primary_600}
                 />
               </TouchableOpacity>
             )}
           </View>
         </View>
       </KeyboardAvoidingView>
-      
-      {/* Loading overlay */}
       {isLoading && (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary_600} />
@@ -752,42 +658,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({route}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.white,
-  },
-  appBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 8,
-  },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
+  container: { flex: 1, backgroundColor: theme.colors.white },
+  appBar: { flexDirection: 'row', alignItems: 'center', padding: 10 },
+  backButton: { padding: 8, marginRight: 8 },
+  profileImage: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
   appBarText: {
     fontSize: 18,
     fontFamily: theme.fonts.satoshi_bold,
     fontWeight: 'semibold',
     color: theme.colors.text_700,
   },
-  divider: {
-    height: 2,
-    backgroundColor: theme.colors.grey_100,
-  },
-  messageList: {
-    flex: 1,
-  },
-  messageListContent: {
-    paddingHorizontal: 10,
-    paddingBottom: 10,
-  },
+  divider: { height: 2, backgroundColor: theme.colors.grey_100 },
+  messageList: { flex: 1 },
+  messageListContent: { paddingHorizontal: 10, paddingBottom: 10 },
   messageBubble: {
     maxWidth: '80%',
     minWidth: '20%',
@@ -809,12 +692,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: theme.fonts.satoshi_regular,
   },
-  currentUserText: {
-    color: '#FFFFFF',
-  },
-  otherUserText: {
-    color: theme.colors.text_900,
-  },
+  currentUserText: { color: '#FFFFFF' },
+  otherUserText: { color: theme.colors.text_900 },
   username: {
     fontSize: 14,
     fontWeight: 'bold',
@@ -830,15 +709,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E8E8E8',
   },
-  imageButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 8,
-  },
-  inputWrapper: {
-    flex: 1,
-    marginHorizontal: 10,
-  },
+  imageButton: { justifyContent: 'center', alignItems: 'center', padding: 8 },
+  inputWrapper: { flex: 1, marginHorizontal: 10 },
   input: {
     backgroundColor: theme.colors.grey_300,
     borderRadius: 20,
@@ -848,21 +720,9 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.satoshi_regular,
     maxHeight: 100,
   },
-  rightButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  recordButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 8,
-    marginRight: 8,
-  },
-  sendButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 8,
-  },
+  rightButtons: { flexDirection: 'row', alignItems: 'center' },
+  recordButton: { justifyContent: 'center', alignItems: 'center', padding: 8, marginRight: 8 },
+  sendButton: { justifyContent: 'center', alignItems: 'center', padding: 8 },
   recordingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -878,9 +738,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.secondary,
     marginRight: 10,
   },
-  recordingTextContainer: {
-    flex: 1,
-  },
+  recordingTextContainer: { flex: 1 },
   recordingText: {
     fontSize: 16,
     fontFamily: theme.fonts.satoshi_medium,
@@ -900,12 +758,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  audioPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    width: '100%',
-  },
+  audioPreview: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%' },
   progressContainer: {
     flex: 1,
     height: 10,
@@ -914,10 +767,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  progressBar: {
-    height: '100%',
-    backgroundColor: theme.colors.primary_600,
-  },
+  progressBar: { height: '100%', backgroundColor: theme.colors.primary_600 },
   progressText: {
     textAlign: 'center',
     marginTop: 4,
@@ -939,11 +789,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
-  imageMessage: {
-    width: 200,
-    height: 200,
-    borderRadius: 10,
-  },
+  imageMessage: { width: 200, height: 200, borderRadius: 10 },
   currentUserTimeText: {
     fontSize: 10,
     fontFamily: theme.fonts.satoshi_regular,
@@ -971,26 +817,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  expandedImage: {
-    width: '90%',
-    height: '80%',
-    resizeMode: 'contain',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    zIndex: 1,
-  },
-  closeButtonText: {
-    fontSize: 28,
-    color: 'white',
-  },
-  infoButton: {
-    marginLeft: 'auto',
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-  },
+  expandedImage: { width: '90%', height: '80%', resizeMode: 'contain' },
+  closeButton: { position: 'absolute', top: 40, right: 20, zIndex: 1 },
+  closeButtonText: { fontSize: 28, color: 'white' },
+  infoButton: { marginLeft: 'auto', paddingHorizontal: 12, justifyContent: 'center' },
 });
 
 export default ChatScreen;

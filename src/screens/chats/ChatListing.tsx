@@ -62,6 +62,8 @@ const ChatListing: React.FC = () => {
           return '📹 Video';
         case 'file':
           return '📁 File';
+        case 'welcome_text':
+          return 'Welcome to the chat!';
         case 'text':
           return item.last_message;
         default:
