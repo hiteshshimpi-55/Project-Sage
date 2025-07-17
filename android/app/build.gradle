@@ -83,8 +83,8 @@ android {
         applicationId "com.project_sage"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2479960
-        versionName "prod-1.0.2"
+        versionCode 2479962
+        versionName "prod-1.0.3"
     }
     signingConfigs {
         debug {
