@@ -41,6 +41,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import AudioPlayer from '@components/molecules/Chat/AudioPlayer';
 import { useUser } from '@hooks/UserContext';
 import { Linking } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import DeviceInfo from 'react-native-device-info';
 import { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
 
@@ -52,6 +53,55 @@ const audioRecorderPlayer = new AudioRecorderPlayer();
 interface ChatScreenProps {
   route: ChatScreenRouteProp;
 }
+
+// Utility function to format message timestamp
+const formatMessageTime = (timestamp: string): string => {
+  const messageDate = new Date(timestamp);
+  const now = new Date();
+  
+  // Get start of today
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  // Get start of this week (Sunday)
+  const startOfWeek = new Date(now);
+  const dayOfWeek = now.getDay();
+  startOfWeek.setDate(now.getDate() - dayOfWeek);
+  startOfWeek.setHours(0, 0, 0, 0);
+  
+  // Format time consistently
+  const time = messageDate.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+  
+  // Check if message is from today
+  if (messageDate >= startOfToday) {
+    // Current day: Show time like 7:30 AM
+    return time;
+  }
+  
+  // Check if message is from this week (excluding today)
+  if (messageDate >= startOfWeek) {
+    // Current week excluding current day: Show Monday 7:30 AM
+    const dayName = messageDate.toLocaleDateString([], { weekday: 'long' });
+    return `${dayName} ${time}`;
+  }
+  
+  // Check if message is from current year
+  if (messageDate.getFullYear() === now.getFullYear()) {
+    // Apart from current week but same year: Show Jun 18, 7:30 AM
+    const month = messageDate.toLocaleDateString([], { month: 'short' });
+    const day = messageDate.getDate();
+    return `${month} ${day}, ${time}`;
+  }
+  
+  // Apart from current year: Show Jun 18, 2024, 7:30 AM
+  const month = messageDate.toLocaleDateString([], { month: 'short' });
+  const day = messageDate.getDate();
+  const year = messageDate.getFullYear();
+  return `${month} ${day}, ${year}, ${time}`;
+};
 
 const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -324,20 +374,48 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     }
   };
 
+  const copyMessage = async (message: Message) => {
+    console.log('Copying message:', message.type, message.text?.substring(0, 50));
+    try {
+      if (message.type === 'text' || message.type === 'welcome_text') {
+        Clipboard.setString(message.text);
+        Alert.alert('Copied', 'Message copied to clipboard');
+      } else if (message.type === 'image') {
+        Alert.alert('Info', 'Cannot copy image messages');
+      } else if (message.type === 'audio') {
+        Alert.alert('Info', 'Cannot copy audio messages');
+      }
+    } catch (error) {
+      console.error('Error copying message:', error);
+      Alert.alert('Error', 'Failed to copy message');
+    }
+  };
+
   const handleLongPress = (itemId: string) => {
-    if (!userContext?.isAdmin) return;
-    Alert.alert(
-      'Delete Message',
-      'Are you sure you want to delete this message?',
-      [
-        { text: 'Cancel', style: 'cancel' },
+    const message = messages.find(msg => msg.id === itemId);
+    if (!message) return;
+
+    const baseOptions = [
+      { text: 'Cancel', style: 'cancel' as const },
+      {
+        text: 'Copy',
+        onPress: () => copyMessage(message),
+      },
+    ];
+
+    // Create alert options based on user permissions
+    if (userContext?.isAdmin) {
+      Alert.alert('Message Options', 'Choose an action', [
+        ...baseOptions,
         {
           text: 'Delete',
-          style: 'destructive',
+          style: 'destructive' as const,
           onPress: () => deleteMessage(itemId),
         },
-      ],
-    );
+      ]);
+    } else {
+      Alert.alert('Message Options', 'Choose an action', baseOptions);
+    }
   };
 
   const startRecording = async () => {
@@ -468,10 +546,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
 
   const renderMessage = useCallback(
     ({ item }: { item: Message }) => {
-      const messageTime = new Date(item.created_at).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      const messageTime = formatMessageTime(item.created_at);
       const isCurrentUser = item.created_by === currentChatUserId;
       return (
         <>
@@ -523,7 +598,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
         </>
       );
     },
-    [currentChatUserId, route.params.type, usernames, handleLongPress],
+    [currentChatUserId, route.params.type, usernames, handleLongPress, messages],
   );
 
   const renderRecordingUI = () => {
