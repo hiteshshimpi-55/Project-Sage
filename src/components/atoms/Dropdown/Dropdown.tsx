@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { CaretDown } from 'phosphor-react-native';
 import theme from '@utils/theme';
@@ -45,7 +46,10 @@ const Dropdown: React.FC<DropdownProps> = ({
   };
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      style={styles.container}
+    >
       <Text style={styles.label}>{label}</Text>
       <TouchableOpacity
         style={[

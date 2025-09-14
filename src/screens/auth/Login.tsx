@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Alert, StyleSheet, Image } from 'react-native';
+import { View, Text, Alert, StyleSheet, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { login } from '../../core/auth';
 import {Input, Button} from '../../components/atoms'
 import { useNavigation } from '@react-navigation/native';
@@ -46,7 +46,10 @@ const Login: React.FC = () => {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
       <Text style={styles.title}>Welcome Back!</Text>
       <Text style={styles.subtitle}>Log in to continue</Text>
 
@@ -73,7 +76,7 @@ const Login: React.FC = () => {
           Sign Up
         </Text>
       </Text>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

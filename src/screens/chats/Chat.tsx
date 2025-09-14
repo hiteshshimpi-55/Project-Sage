@@ -16,6 +16,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import supabase from '../../core/supabase';
@@ -651,8 +652,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     );
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    style={styles.container}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+  >
+    <View style={[styles.container, {paddingTop: insets.top}]}>
       <View style={styles.appBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <CaretLeft size={24} color={theme.colors.text_700} weight="bold" />
@@ -669,11 +677,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
         )}
       </View>
       <View style={styles.divider} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-      >
+
         <FlatList
           data={messages}
           renderItem={renderMessage}
@@ -683,7 +687,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           contentContainerStyle={styles.messageListContent}
           extraData={messages}
         />
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, {paddingBottom: insets.bottom + 10}]}>
           {!showRecordingControls && (
             <TouchableOpacity onPress={handleImagePicker} style={styles.imageButton}>
               <ImageIcon size={24} color={theme.colors.primary_600} />
@@ -722,19 +726,26 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
             )}
           </View>
         </View>
-      </KeyboardAvoidingView>
       {isLoading && (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary_600} />
         </View>
       )}
-    </SafeAreaView>
+    </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.white },
-  appBar: { flexDirection: 'row', alignItems: 'center', padding: 10 },
+  appBar: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 10,
+    backgroundColor: theme.colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.grey_100,
+  },
   backButton: { padding: 8, marginRight: 8 },
   profileImage: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
   appBarText: {

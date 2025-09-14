@@ -89,7 +89,7 @@ function AppContent(): React.JSX.Element {
 
   return (
       <NavigationContainer>
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
           <Stack.Navigator initialRouteName={isAuthenticated ? 'Home' : 'Login'}>
             {/* Auth and Other Screens */}
             <Stack.Screen name="Signup" component={Signup} options={{ headerShown: false }}/>
@@ -107,7 +107,7 @@ function AppContent(): React.JSX.Element {
               options={{ headerShown: false }}
             />
           </Stack.Navigator>
-        </SafeAreaView>
+        </View>
       </NavigationContainer>
   );
 }
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: '#fff',
   },

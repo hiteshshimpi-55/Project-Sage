@@ -1,5 +1,6 @@
 import React, {useEffect} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import ChatListing from '../chats/ChatListing';
 import CalendarScreen from '../calendar/CalendarScreen';
@@ -90,38 +91,41 @@ const AppBar = () => {
 
 const Home = () => {
   const {user: currentUser} = useUser();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={{flex: 1}}>
+    <View style={[styles.container, {paddingTop: insets.top}]}>
       {/* Render the custom AppBar */}
       <AppBar />
-      <Tab.Navigator
-        tabBar={props => <BottomBar {...props} />}
-        screenOptions={{headerShown: false}}>
-        <Tab.Screen
-          name="ChatListing"
-          component={
-            currentUser?.status === 'active' ? ChatListing : UserHoveringScreen
-          }
-        />
-        <Tab.Screen
-          name="ChannelsListing"
-          component={
-            currentUser?.status === 'active'
-              ? ChannelListing
-              : UserHoveringScreen
-          }
-        />
-        <Tab.Screen
-          name="CalendarScreen"
-          component={
-            currentUser?.status === 'active'
-              ? CalendarScreen
-              : UserHoveringScreen
-          }
-        />
-        <Tab.Screen name="ProfileScreen" component={ProfileScreen} />
-      </Tab.Navigator>
+      <View style={styles.tabContainer}>
+        <Tab.Navigator
+          tabBar={props => <BottomBar {...props} />}
+          screenOptions={{headerShown: false}}>
+          <Tab.Screen
+            name="ChatListing"
+            component={
+              currentUser?.status === 'active' ? ChatListing : UserHoveringScreen
+            }
+          />
+          <Tab.Screen
+            name="ChannelsListing"
+            component={
+              currentUser?.status === 'active'
+                ? ChannelListing
+                : UserHoveringScreen
+            }
+          />
+          <Tab.Screen
+            name="CalendarScreen"
+            component={
+              currentUser?.status === 'active'
+                ? CalendarScreen
+                : UserHoveringScreen
+            }
+          />
+          <Tab.Screen name="ProfileScreen" component={ProfileScreen} />
+        </Tab.Navigator>
+      </View>
     </View>
   );
 };
@@ -129,6 +133,13 @@ const Home = () => {
 export default Home;
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  tabContainer: {
+    flex: 1,
+  },
   appBar: {
     height: 60,
     backgroundColor: '#fff',
@@ -141,6 +152,8 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.grey_100,
   },
   appBarText: {
     fontSize: 18,
