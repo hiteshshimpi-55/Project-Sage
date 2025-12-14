@@ -12,6 +12,8 @@ interface UserCardProps {
   onActivate?: () => void;
   onDeactivate?: () => void;
   onMakeAdmin: () => void;
+  onScheduleMessages?: () => void;
+  hasActiveSchedule?: boolean;
 }
 
 const UserCard: React.FC<UserCardProps> = ({
@@ -21,6 +23,8 @@ const UserCard: React.FC<UserCardProps> = ({
   onActivate,
   onDeactivate,
   onMakeAdmin,
+  onScheduleMessages,
+  hasActiveSchedule = false,
 }) => {
   const confirmAction = (action: string, callback: () => void) => {
     Alert.alert(
@@ -75,7 +79,20 @@ const UserCard: React.FC<UserCardProps> = ({
               style={styles.adminButton}
             />
           </View>
-        ) : null}
+        ) : (
+          onScheduleMessages && (
+            <View style={styles.buttonWrapper}>
+              <Button
+                title={hasActiveSchedule ? 'Manage Schedule' : 'Schedule Messages'}
+                onPress={() => confirmAction('Schedule Messages', onScheduleMessages)}
+                style={[
+                  styles.scheduleButton,
+                  hasActiveSchedule && styles.activeScheduleButton
+                ]}
+              />
+            </View>
+          )
+        )}
       </View>
     </View>
   );
@@ -161,6 +178,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderTopRightRadius: 6,
     borderBottomRightRadius: 6,
+  },
+  scheduleButton: {
+    backgroundColor: colors.primary_600,
+    paddingVertical: 10,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
+  },
+  activeScheduleButton: {
+    backgroundColor: colors.success_main,
   },
   disabledButton: {
     backgroundColor: colors.grey_300,

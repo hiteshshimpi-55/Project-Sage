@@ -15,6 +15,7 @@ import Login from './screens/auth/Login';
 import ChatScreen from './screens/chats/Chat';
 import AdminDashboard from './screens/admin/AdminDashboard';
 import AdminMeeting from './screens/admin/AdminMeet';
+import ScheduledMessagesScreen from './screens/admin/ScheduledMessagesScreen';
 import Home from './screens/home/Home';
 import ChannelDetailsScreen from './screens/channels/ChannelDetail';
 
@@ -25,12 +26,14 @@ import theme from '@utils/theme';
 import { User, UserMetadata, UserResponse } from '@supabase/supabase-js';
 import UserHoveringScreen from './screens/static/UserHoveringScreen';
 import { UserService } from '@utils/user_service';
+import { ActivationCheckService } from '@utils/activation_check_service';
 import AboutUsScreen from './screens/admin/AboutUs';
 
 export type RootStackParamList = {
   Signup: undefined;
   Login: undefined;
   AdminDashboard: undefined;
+  ScheduledMessages: undefined;
   ChatScreen: {
     id: string;
     type: string;
@@ -72,6 +75,14 @@ function AppContent(): React.JSX.Element {
       const transformedUser = UserService.transformUserContext(user.data!.user);
       console.log("Transformed user", transformedUser);
       setUser(transformedUser);
+      
+      // Check if user needs activation follow-up message
+      if (transformedUser && !transformedUser.isAdmin) {
+        await ActivationCheckService.checkAndSendActivationMessage(
+          transformedUser.id,
+          transformedUser.activationDate
+        );
+      }
     }
   }
 
@@ -95,6 +106,7 @@ function AppContent(): React.JSX.Element {
             <Stack.Screen name="Signup" component={Signup} options={{ headerShown: false }}/>
             <Stack.Screen name="Login" component={Login} options={{ headerShown: false }}/>
             <Stack.Screen name="AdminDashboard" component={AdminDashboard}/>
+            <Stack.Screen name="ScheduledMessages" component={ScheduledMessagesScreen} options={{ title: 'Scheduled Messages' }}/>
             <Stack.Screen name="ChatScreen" component={ChatScreen} options={{ headerShown: false }}/>
             <Stack.Screen name="ChannelDetailsScreen" component={ChannelDetailsScreen} options={{ headerShown: true }}/>
             <Stack.Screen name="MeetLink" component={AdminMeeting} />

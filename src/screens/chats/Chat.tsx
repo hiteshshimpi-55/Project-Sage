@@ -16,7 +16,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import supabase from '../../core/supabase';
@@ -59,36 +59,36 @@ interface ChatScreenProps {
 const formatMessageTime = (timestamp: string): string => {
   const messageDate = new Date(timestamp);
   const now = new Date();
-  
+
   // Get start of today
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+
   // Get start of this week (Sunday)
   const startOfWeek = new Date(now);
   const dayOfWeek = now.getDay();
   startOfWeek.setDate(now.getDate() - dayOfWeek);
   startOfWeek.setHours(0, 0, 0, 0);
-  
+
   // Format time consistently
   const time = messageDate.toLocaleTimeString([], {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
-  
+
   // Check if message is from today
   if (messageDate >= startOfToday) {
     // Current day: Show time like 7:30 AM
     return time;
   }
-  
+
   // Check if message is from this week (excluding today)
   if (messageDate >= startOfWeek) {
     // Current week excluding current day: Show Monday 7:30 AM
     const dayName = messageDate.toLocaleDateString([], { weekday: 'long' });
     return `${dayName} ${time}`;
   }
-  
+
   // Check if message is from current year
   if (messageDate.getFullYear() === now.getFullYear()) {
     // Apart from current week but same year: Show Jun 18, 7:30 AM
@@ -96,7 +96,7 @@ const formatMessageTime = (timestamp: string): string => {
     const day = messageDate.getDate();
     return `${month} ${day}, ${time}`;
   }
-  
+
   // Apart from current year: Show Jun 18, 2024, 7:30 AM
   const month = messageDate.toLocaleDateString([], { month: 'short' });
   const day = messageDate.getDate();
@@ -120,6 +120,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const [usernames, setUsernames] = useState<{ [key: string]: string }>({});
   const [chatUserName, setChatUserName] = useState<string>(route.params.name || '');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState('0:00');
   const [audioPath, setAudioPath] = useState<string | null>(null);
@@ -195,24 +197,59 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     }
   }, [userContext?.id, route.params.id]);
 
-  const fetchMessages = useCallback(async () => {
-    if (!currentChatId) return;
+  const loadMessages = useCallback(async (loadMore = false) => {
+    if (!currentChatId || (loadMore && !hasMore) || (loadMore && isLoadingMore)) return;
+
     try {
-      const { data, error } = await supabase
+      if (loadMore) {
+        setIsLoadingMore(true);
+      } else {
+        // Only set main loading state if we don't have messages yet
+        // or if we want to show a clear refresh
+        if (messages.length === 0) setIsLoading(true);
+      }
+
+      let query = supabase
         .from('message')
         .select('*')
         .eq('chat_id', currentChatId)
         .order('created_at', { ascending: false })
         .limit(20);
+
+      if (loadMore && messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        query = query.lt('created_at', lastMessage.created_at);
+      }
+
+      const { data, error } = await query;
+
       if (error) {
         console.error('Error fetching messages:', error);
         return;
       }
-      setMessages(data || []);
+
+      const newMessages = data || [];
+      if (newMessages.length < 20) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+
+      if (loadMore) {
+        setMessages(prev => [...prev, ...newMessages]);
+      } else {
+        setMessages(newMessages);
+      }
     } catch (error) {
       console.error('Error fetching messages:', error);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
     }
-  }, [currentChatId]);
+  }, [currentChatId, messages, hasMore, isLoadingMore]);
+
+  // Keep old name for compatibility if needed, but better to use loadMessages
+  const fetchMessages = () => loadMessages(false);
 
   const fetchAndSetUsernames = useCallback(async () => {
     if (!currentChatId) return;
@@ -272,10 +309,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   useEffect(() => {
     if (!currentChatId) return;
     const loadChatData = async () => {
-      await Promise.all([fetchMessages(), fetchAndSetUsernames()]);
+      // Load initial messages
+      await loadMessages(false);
+      await fetchAndSetUsernames();
     };
     loadChatData();
-  }, [currentChatId, fetchMessages, fetchAndSetUsernames]);
+  }, [currentChatId, fetchAndSetUsernames]); // Removed fetchMessages dependency to avoid loops
 
   const markAsRead = async () => {
     if (!currentChatUserId) return;
@@ -656,27 +695,27 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
 
   return (
     <KeyboardAvoidingView
-    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    style={styles.container}
-    keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-  >
-    <View style={[styles.container, {paddingTop: insets.top}]}>
-      <View style={styles.appBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <CaretLeft size={24} color={theme.colors.text_700} weight="bold" />
-        </TouchableOpacity>
-        <Image source={{ uri: 'https://picsum.photos/200/300' }} style={styles.profileImage} />
-        <Text style={styles.appBarText}>{chatUserName}</Text>
-        {currentChatId && route.params.type === 'one-to-many' && (
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ChannelDetailsScreen', { id: currentChatId })}
-            style={styles.infoButton}
-          >
-            <Info size={24} color={theme.colors.text_700} />
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    >
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.appBar}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <CaretLeft size={24} color={theme.colors.text_700} weight="bold" />
           </TouchableOpacity>
-        )}
-      </View>
-      <View style={styles.divider} />
+          <Image source={{ uri: 'https://picsum.photos/200/300' }} style={styles.profileImage} />
+          <Text style={styles.appBarText}>{chatUserName}</Text>
+          {currentChatId && route.params.type === 'one-to-many' && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ChannelDetailsScreen', { id: currentChatId })}
+              style={styles.infoButton}
+            >
+              <Info size={24} color={theme.colors.text_700} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={styles.divider} />
 
         <FlatList
           data={messages}
@@ -686,8 +725,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
           style={styles.messageList}
           contentContainerStyle={styles.messageListContent}
           extraData={messages}
+          onEndReached={() => loadMessages(true)}
+          onEndReachedThreshold={0.2}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={theme.colors.primary_600} />
+              </View>
+            ) : null
+          }
         />
-        <View style={[styles.inputContainer, {paddingBottom: insets.bottom + 10}]}>
+        <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 10 }]}>
           {!showRecordingControls && (
             <TouchableOpacity onPress={handleImagePicker} style={styles.imageButton}>
               <ImageIcon size={24} color={theme.colors.primary_600} />
@@ -726,21 +774,21 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
             )}
           </View>
         </View>
-      {isLoading && (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary_600} />
-        </View>
-      )}
-    </View>
+        {isLoading && (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary_600} />
+          </View>
+        )}
+      </View>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.white },
-  appBar: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  appBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 10,
     backgroundColor: theme.colors.white,
     borderBottomWidth: 1,
@@ -757,6 +805,11 @@ const styles = StyleSheet.create({
   divider: { height: 2, backgroundColor: theme.colors.grey_100 },
   messageList: { flex: 1 },
   messageListContent: { paddingHorizontal: 10, paddingBottom: 10 },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   messageBubble: {
     maxWidth: '80%',
     minWidth: '20%',

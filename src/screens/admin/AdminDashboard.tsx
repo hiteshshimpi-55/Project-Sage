@@ -7,11 +7,18 @@ import {
   TextInput,
   ActivityIndicator,
   FlatList,
+  TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../App';
 import UserCard from '../../components/molecules/UserCard';
 import {UserService} from '../../utils/user_service';
 import {ChatService} from '../../utils/chat_service';
 import {ChatServiceV2} from '../chats/service/chat_service';
+import {MessageSchedulerService} from '../../utils/message_scheduler_service';
+import Button from '../../components/atoms/Button/Button';
+import theme from '../../utils/theme';
 
 // Constants
 const PAGE_SIZE = 10;
@@ -59,9 +66,12 @@ interface User {
   dob?: string;
   gender?: string;
   status: 'active' | 'inactive';
+  hasActiveSchedule?: boolean;
 }
 
 const AdminDashboard: React.FC = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  
   // State
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -80,8 +90,28 @@ const AdminDashboard: React.FC = () => {
     try {
       const allUsers = await UserService.getAllUsers('');
 
+      // Check which users have active scheduled messages
+      const usersWithScheduleStatus = await Promise.all(
+        allUsers.map(async (user: User) => {
+          try {
+            const activeSchedule = await MessageSchedulerService.getActiveScheduleForUser(user.id);
+            return {
+              ...user,
+              hasActiveSchedule: !!activeSchedule,
+            };
+          } catch (error) {
+            console.error(`Error checking schedule for user ${user.id}:`, error);
+            // Return user without schedule info if there's an error
+            return {
+              ...user,
+              hasActiveSchedule: false,
+            };
+          }
+        })
+      );
+
       // Filter users based on search query
-      const filtered = allUsers.filter(
+      const filtered = usersWithScheduleStatus.filter(
         (user: User) =>
           user.full_name.toLowerCase().includes(search.toLowerCase()) ||
           user.phone.includes(search),
@@ -188,10 +218,91 @@ const AdminDashboard: React.FC = () => {
   const handleDeactivateUser = async (userId: string) => {
     try {
       await UserService.deactivateUser(userId);
+      // Also deactivate any scheduled messages for this user
+      await MessageSchedulerService.deactivateScheduledMessage(userId);
       Alert.alert('Success', 'User deactivated successfully.');
       fetchUsers();
     } catch (error) {
       Alert.alert('Error', 'Failed to deactivate user.');
+    }
+  };
+
+  const handleScheduleMessages = async (userId: string) => {
+    try {
+      const currentUserId = await ChatService.getCurrentUserId();
+      if (!currentUserId) throw new Error('Failed to fetch current user ID');
+
+      // Check if user already has an active schedule
+      const existingSchedule = await MessageSchedulerService.getActiveScheduleForUser(userId);
+      
+      if (existingSchedule) {
+        Alert.alert(
+          'Manage Scheduled Messages',
+          'This user already has scheduled messages. What would you like to do?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Stop Scheduling',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await MessageSchedulerService.deactivateScheduledMessage(userId);
+                  Alert.alert('Success', 'Scheduled messages stopped.');
+                  fetchUsers();
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to stop scheduled messages.');
+                }
+              },
+            },
+            {
+              text: 'Update Message',
+              onPress: () => {
+                Alert.prompt(
+                  'Update Message',
+                  'Enter new message content:',
+                  async (newMessage) => {
+                    if (newMessage && newMessage.trim()) {
+                      try {
+                        await MessageSchedulerService.updateMessageContent(userId, newMessage.trim());
+                        Alert.alert('Success', 'Message content updated.');
+                      } catch (error) {
+                        Alert.alert('Error', 'Failed to update message.');
+                      }
+                    }
+                  },
+                  'plain-text',
+                  existingSchedule.message_content
+                );
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.prompt(
+          'Schedule Messages',
+          'Enter custom message (or leave empty for default appointment reminder):',
+          async (customMessage) => {
+            try {
+              await MessageSchedulerService.createScheduledMessage(
+                userId,
+                currentUserId,
+                customMessage?.trim() || undefined
+              );
+              Alert.alert(
+                'Success',
+                'Messages scheduled successfully!\n\nSchedule:\n• 1st message: Today\n• 2nd message: After 7 days\n• 3rd message: After 14 days\n• Subsequent messages: Every 15 days'
+              );
+              fetchUsers();
+            } catch (error) {
+              Alert.alert('Error', `Failed to schedule messages: ${(error as Error).message}`);
+            }
+          },
+          'plain-text',
+          'You have an appointment tomorrow'
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to handle scheduled messages.');
     }
   };
   const renderUserItem = ({item}: {item: User}) => (
@@ -203,6 +314,8 @@ const AdminDashboard: React.FC = () => {
       onDeactivate={() => handleDeactivateUser(item.id)}
       onActivate={() => handleActivateUser(item.id)}
       onMakeAdmin={() => handleMakeAdmin(item.id)}
+      onScheduleMessages={() => handleScheduleMessages(item.id)}
+      hasActiveSchedule={item.hasActiveSchedule}
     />
   );
 
@@ -233,6 +346,15 @@ const AdminDashboard: React.FC = () => {
         <Text style={styles.stat}>Total Users: {stats.total}</Text>
         <Text style={styles.stat}>Active: {stats.active}</Text>
         <Text style={styles.stat}>Inactive: {stats.inactive}</Text>
+      </View>
+
+      {/* Scheduled Messages Button */}
+      <View style={styles.actionButtonContainer}>
+        <Button
+          title="Manage Scheduled Messages"
+          onPress={() => navigation.navigate('ScheduledMessages')}
+          style={styles.scheduledMessagesButton}
+        />
       </View>
 
       {loading ? (
@@ -277,6 +399,15 @@ const styles = StyleSheet.create({
   stat: {
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  actionButtonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+  },
+  scheduledMessagesButton: {
+    backgroundColor: theme.colors.primary_600,
+    paddingVertical: 12,
   },
   scrollContainer: {
     paddingHorizontal: 10,

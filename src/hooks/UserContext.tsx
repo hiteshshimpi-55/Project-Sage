@@ -10,6 +10,7 @@ interface User {
   age?: number;
   dob?: string;
   isAdmin: boolean;
+  activationDate?: string;
 }
 
 interface UserContextProps {

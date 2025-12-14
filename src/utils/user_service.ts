@@ -40,6 +40,26 @@ export class UserService {
     if (error) throw error;
   }
 
+  public static async getFirstAdminUserId(): Promise<string | null> {
+    try {
+      const { data, error } = await adminAuthClient.listUsers();
+      if (error) {
+        console.error('Error fetching users for admin lookup:', error);
+        return null;
+      }
+      
+      const adminUser = data.users.find(user => 
+        user.user_metadata?.role === 'admin' && 
+        user.user_metadata?.status === 'active'
+      );
+      
+      return adminUser?.id || null;
+    } catch (error) {
+      console.error('Error getting admin user ID:', error);
+      return null;
+    }
+  }
+
   public static transformUserContext(user: User): any {
     const metadata = user.user_metadata
     return {
@@ -52,6 +72,7 @@ export class UserService {
       age: metadata.age,
       dob: metadata.dob,
       isAdmin: metadata.role === 'admin',
+      activationDate: metadata.activation_date,
     };
   }
 }
