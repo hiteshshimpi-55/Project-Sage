@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,19 +8,20 @@ import {
   Image,
   TextInput,
 } from 'react-native';
-import {NavigationProp, useNavigation} from '@react-navigation/native';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
 
-import {ChatUser, ChatListingService} from './service/chat_listing_service';
+import { ChatUser, ChatListingService } from './service/chat_listing_service';
 import theme from '@utils/theme';
-import {useUser} from '@hooks/UserContext';
+import { useUser } from '@hooks/UserContext';
+import supabase from '../../core/supabase';
 
 const formatTime = (timestamp: string) => {
   const date = new Date(timestamp);
-  return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 const ChatListing: React.FC = () => {
-  const {user: currentUser} = useUser();
+  const { user: currentUser } = useUser();
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation<NavigationProp<any>>();
@@ -39,11 +40,27 @@ const ChatListing: React.FC = () => {
 
   useEffect(() => {
     loadUsers(true);
-    const intervalId = setInterval(() => {
-      loadUsers(true);
-    }, 10000);
 
-    return () => clearInterval(intervalId);
+    // Subscribe to realtime updates for messages instead of polling
+    const channel = supabase
+      .channel('chat-listing-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'message',
+        },
+        () => {
+          // When a new message is inserted, reload the user list
+          loadUsers(false);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filteredUsers = users.filter(user => {
@@ -51,7 +68,7 @@ const ChatListing: React.FC = () => {
     return fullName.includes(searchQuery.toLowerCase());
   });
 
-  const renderUser = ({item, index}: {item: ChatUser; index: number}) => {
+  const renderUser = ({ item, index }: { item: ChatUser; index: number }) => {
     const getMessagePreview = () => {
       switch (item.last_message_type) {
         case 'image':

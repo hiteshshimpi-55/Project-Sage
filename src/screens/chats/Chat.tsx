@@ -112,6 +112,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const pulseAnimation = useState(new Animated.Value(1))[0];
   const inputWidthAnimation = useState(new Animated.Value(1))[0];
 
+  // Refs for cleanup
+  const recordingIntervalRef = useCallback(() => ({ current: null as NodeJS.Timeout | null }), [])();
+  const retryCountRef = useCallback(() => ({ current: 0 }), [])();
+
   // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -246,7 +250,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [currentChatId, messages, hasMore, isLoadingMore]);
+  }, [currentChatId, hasMore, isLoadingMore]);
 
   // Keep old name for compatibility if needed, but better to use loadMessages
   const fetchMessages = () => loadMessages(false);
@@ -294,7 +298,20 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
       .subscribe((status) => {
         console.log('Subscription status:', status);
         if (status === REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR) {
-          setTimeout(() => channel.subscribe(), 5000);
+          // Limit retries to prevent infinite loops
+          const MAX_RETRIES = 3;
+          if (retryCountRef.current < MAX_RETRIES) {
+            retryCountRef.current += 1;
+            // Exponential backoff: 5s, 10s, 20s
+            const delay = 5000 * Math.pow(2, retryCountRef.current - 1);
+            console.log(`Retrying subscription (attempt ${retryCountRef.current}/${MAX_RETRIES}) in ${delay}ms`);
+            setTimeout(() => channel.subscribe(), delay);
+          } else {
+            console.error('Max subscription retries reached. Please reload the app.');
+          }
+        } else if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) {
+          // Reset retry counter on successful subscription
+          retryCountRef.current = 0;
         }
       });
     return () => {
@@ -391,7 +408,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     try {
       const result = await launchImageLibrary({
         mediaType: 'photo',
-        quality: 0.8,
+        quality: 1,
       });
       if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
         const tempId = `temp-${Date.now()}`;
@@ -465,14 +482,20 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
       const path = await audioRecorderPlayer.startRecorder();
       setAudioPath(path);
       let counter = 0;
-      const interval = setInterval(() => {
+
+      // Store interval ref for cleanup
+      recordingIntervalRef.current = setInterval(() => {
         counter += 1;
         setRecordingDuration(
           `${Math.floor(counter / 60)}:${(counter % 60).toString().padStart(2, '0')}`,
         );
       }, 1000);
+
       setTimeout(() => {
-        clearInterval(interval);
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
         if (isRecording) {
           stopRecording();
         }
@@ -488,6 +511,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const stopRecording = async () => {
     if (!isRecording) return;
     try {
+      // Clear recording interval
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
       const path = await audioRecorderPlayer.stopRecorder();
       setAudioPath(path);
       setIsRecording(false);
@@ -578,6 +606,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
 
   useEffect(() => {
     return () => {
+      // Clean up recording interval if it exists
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
       audioRecorderPlayer.stopRecorder();
       audioRecorderPlayer.stopPlayer();
       audioRecorderPlayer.removePlayBackListener();

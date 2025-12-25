@@ -1,12 +1,12 @@
-
-import { createClient } from '@supabase/supabase-js'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-export const handleRequest = async (req:any) => {
+serve(async (req:any) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -66,7 +66,7 @@ export const handleRequest = async (req:any) => {
         processedCount++
         console.log(`Successfully processed message for user ${message.user_id}`)
       } catch (error) {
-        const errorMsg = `Failed to process message for user ${message.user_id}: ${(error as Error)?.message ?? 'Unknown error'}`
+        const errorMsg = `Failed to process message for user ${message.user_id}: ${error.message}`
         console.error(errorMsg)
         errors.push(errorMsg)
       }
@@ -90,7 +90,7 @@ export const handleRequest = async (req:any) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: (error as Error)?.message ?? 'Unknown error' 
+        error: error.message 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
